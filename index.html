@@ -13,6 +13,7 @@
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="icons/favicon-64.png" type="image/png" sizes="64x64">
 <link rel="preload" href="vendor/fonts/cinzel-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<script src="i18n/th.js"></script>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
 @font-face {
@@ -81,7 +82,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Thai", "Leelawadee UI", Thonburi, sans-serif;
   font-variant-numeric: tabular-nums;
   min-height: 100vh;
   padding-bottom: env(safe-area-inset-bottom);
@@ -119,6 +120,16 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
   .brand img { width: 22px; height: 27px; }
   .brand h1 { font-size: 16px; letter-spacing: .02em; }
 }
+
+/* language picker */
+.langpick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 12px; }
+.langpick .lang-label { display: inline-flex; align-items: center; gap: 6px; margin-right: 2px; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.langpick svg { width: 17px; height: 17px; flex: none; }
+.langpick button { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-weight: 600; font-size: 14px; cursor: pointer; }
+.langpick button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.wrap > .langpick.app { justify-content: center; margin: 28px 0 0; }
+.settings-block .langpick { margin: 12px 0 0; }
+.cardview .langpick { justify-content: center; margin: 0; }
 
 /* credit line */
 .credit { margin: 32px auto 8px; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--muted); font-size: 13.5px; text-align: left; }
@@ -437,6 +448,32 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const goodId = id => typeof id === 'string' && /^[a-z0-9]{4,40}$/i.test(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/* ---------- languages ----------
+   The code is written in English. Each other language is a file in i18n/ that maps the English text to its own,
+   with {name} marking a value filled in at run time. To add a language, copy i18n/th.js, translate the right-hand
+   side, load it in the head next to i18n/th.js and add an entry here. Missing lines fall back to English. */
+const LANGS = {
+  en: { name: 'English', months: MONTHS, year: y => y },
+  th: { name: 'ไทย', months: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'], year: y => y + 543, dict: window.LANG_TH || {} },
+};
+let uiLang = 'en';      // language of the app
+let docLangSet = '';    // language picked for the doctor, blank to follow the app
+let lang = 'en';        // language being drawn right now
+const docLang = () => LANGS[docLangSet] ? docLangSet : uiLang;
+const MISSING = new Set();
+function t(str, vars) {
+  const dict = LANGS[lang]?.dict;
+  let out = str;
+  if (dict) { if (str in dict) out = dict[str]; else MISSING.add(str); }
+  if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+  return out;
+}
+const count = (n, one, many) => t(n === 1 ? one : many, { n });
+function inLang(l, fn) { const prev = lang; lang = l; try { return fn(); } finally { lang = prev; } }
+async function inLangAsync(l, fn) { const prev = lang; lang = l; try { return await fn(); } finally { lang = prev; } }
+const monthName = m => (LANGS[lang] || LANGS.en).months[m];
+const yearOf = y => (LANGS[lang] || LANGS.en).year(y);
 const STALE_DAYS = 180;
 const LOCK_AFTER_MS = 10 * 60 * 1000;
 
@@ -444,7 +481,7 @@ function fmtDate(iso) {
   if (!iso) return '';
   const d = new Date(iso.length <= 10 ? iso + 'T00:00' : iso);
   if (isNaN(d)) return iso;
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${monthName(d.getMonth())} ${yearOf(d.getFullYear())}`;
 }
 function pad(n) { return String(n).padStart(2, '0'); }
 function dayOf(ts) { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
@@ -455,11 +492,11 @@ function fmtDose(iso, absolute) {
   const now = new Date();
   const day = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((day(now) - day(d)) / 86400000);
-  const t = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (absolute) return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()} ${t}`;
-  if (diff === 0) return `today ${t}`;
-  if (diff === 1) return `yesterday ${t}`;
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ' ' + d.getFullYear() : ''} ${t}`;
+  const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (absolute) return `${d.getDate()} ${monthName(d.getMonth())} ${yearOf(d.getFullYear())} ${hm}`;
+  if (diff === 0) return t('today {time}', { time: hm });
+  if (diff === 1) return t('yesterday {time}', { time: hm });
+  return `${d.getDate()} ${monthName(d.getMonth())}${d.getFullYear() !== now.getFullYear() ? ' ' + yearOf(d.getFullYear()) : ''} ${hm}`;
 }
 function localNow() {
   const d = new Date();
@@ -471,30 +508,31 @@ function age(dob) {
   let m = (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth());
   if (n.getDate() < d.getDate()) m--;
   if (isNaN(m) || m < 0) return '';
-  if (m < 24) return `${m} mo`;
-  return `${Math.floor(m / 12)} y`;
+  if (m < 24) return t('{n} mo', { n: m });
+  return t('{n} y', { n: Math.floor(m / 12) });
 }
 function ago(ts) {
   const days = Math.floor((Date.now() - ts) / 86400000);
-  if (days < 1) return 'today';
-  if (days < 2) return 'yesterday';
-  if (days < 45) return `${days} days ago`;
+  if (days < 1) return t('today');
+  if (days < 2) return t('yesterday');
+  if (days < 45) return t('{n} days ago', { n: days });
   const months = Math.round(days / 30.4);
-  if (months < 18) return `${months} months ago`;
-  return `${Math.floor(days / 365)} years ago`;
+  if (months < 18) return t('{n} months ago', { n: months });
+  return t('{n} years ago', { n: Math.floor(days / 365) });
 }
 const isStale = ts => ts && (Date.now() - ts) > STALE_DAYS * 86400000;
 function initials(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  // Thai vowels written before the consonant are skipped so สมศรี ใจดี gives สจ
+  const parts = String(name || '').trim().split(/\s+/).map(w => w.replace(/^[\u0E40-\u0E44]+/, '')).filter(Boolean);
   if (!parts.length) return '?';
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
 }
 function toast(msg, ms = 2600) {
   $('.toast')?.remove();
-  const t = document.createElement('div');
-  t.className = 'toast'; t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), ms);
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), ms);
 }
 /* ---------- brand and install ---------- */
 const APP_URL = 'https://cygnus-solutions.github.io/Medical-Info/';
@@ -507,7 +545,7 @@ const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platfo
 const canInstall = () => !isInstalled() && (!!installEvent || isIOS);
 function syncInstall() { $$('[data-install]').forEach(b => { b.hidden = !canInstall(); }); }
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; syncInstall(); });
-window.addEventListener('appinstalled', () => { installEvent = null; syncInstall(); toast('Installed. Open it from your home screen.'); });
+window.addEventListener('appinstalled', () => { installEvent = null; syncInstall(); toast(t('Installed. Open it from your home screen.')); });
 async function installApp() {
   if (installEvent) {
     installEvent.prompt();
@@ -516,15 +554,34 @@ async function installApp() {
     syncInstall();
     return;
   }
-  const m = modal(`<h2>Install on iPhone</h2>
-    <p>1. Tap the Share button. Safari has it at the bottom and Chrome at the top right.</p>
-    <p>2. Tap Add to Home Screen, then Add.</p>
-    <div class="row"><button class="btn primary" data-x>OK</button></div>`);
+  const m = modal(`<h2>${t('Install on iPhone')}</h2>
+    <p>${t('1. Tap the Share button. Safari has it at the bottom and Chrome at the top right.')}</p>
+    <p>${t('2. Tap Add to Home Screen, then Add.')}</p>
+    <div class="row"><button class="btn primary" data-x>${t('OK')}</button></div>`);
   $('[data-x]', m).onclick = () => m.remove();
 }
 function bindInstall() { $$('[data-install]').forEach(b => { b.hidden = !canInstall(); b.onclick = installApp; }); }
+function langPicker(kind) {
+  const cur = kind === 'doc' ? docLang() : uiLang;
+  const label = kind === 'doc' ? t('Language for the doctor') : t('Language');
+  return `<div class="langpick ${kind}" role="group" aria-label="${esc(label)}"><span class="lang-label">${ICON.globe}${kind === 'doc' ? esc(label) : ''}</span>${Object.entries(LANGS).map(([k, v]) =>
+    `<button type="button" lang="${k}" class="${k === cur ? 'on' : ''}" aria-pressed="${k === cur}" data-lang-${kind}="${k}">${v.name}</button>`).join('')}</div>`;
+}
+function bindLangPicker() {
+  $$('[data-lang-app]').forEach(b => b.onclick = async () => {
+    uiLang = lang = b.dataset.langApp; docLangSet = '';
+    document.documentElement.lang = uiLang;
+    await setSetting('lang', uiLang); await setSetting('docLang', '');
+    render();
+  });
+  $$('[data-lang-doc]').forEach(b => b.onclick = async () => {
+    docLangSet = b.dataset.langDoc;
+    await setSetting('docLang', docLangSet);
+    render();
+  });
+}
 function creditHtml() {
-  return `<footer class="credit">${SWAN}<div><b>Cygnus Solutions</b>Free to use. <a href="${REPO_URL}" target="_blank" rel="noopener">Source on GitHub</a></div></footer>`;
+  return `<footer class="credit">${SWAN}<div><b>Cygnus Solutions</b>${t('Free to use.')} <a href="${REPO_URL}" target="_blank" rel="noopener">${t('Source on GitHub')}</a></div></footer>`;
 }
 
 const ICON = {
@@ -536,6 +593,7 @@ const ICON = {
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7 12h10"/></svg>',
+  globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
 };
 
@@ -716,7 +774,8 @@ const SECTIONS = [
   {
     key: 'ids', title: 'IDs and insurance', locked: true,
     fields: [
-      { k: 'philhealth', label: 'PhilHealth number' },
+      { k: 'nationalId', label: 'National ID number' },
+      { k: 'philhealth', label: 'National health insurance', hint: 'Which scheme and what number? Example: PhilHealth 12-345678901-2' },
       { k: 'hmo', label: 'HMO provider', hint: 'Example: Maxicare' },
       { k: 'hmoNumber', label: 'HMO card number' },
       { k: 'hmoHotline', label: 'HMO approval hotline', type: 'tel', hint: 'Printed on the back of the HMO card' },
@@ -802,7 +861,7 @@ function sec(p, key) {
   return p.data[key];
 }
 const isFemale = p => sec(p, 'basics').sex === 'Female';
-const displayName = p => sec(p, 'basics').name || 'Unnamed';
+const displayName = p => sec(p, 'basics').name || t('Unnamed');
 
 /* ---------- PIN lock ---------- */
 let unlockedUntil = 0;
@@ -820,17 +879,17 @@ async function requireUnlock() {
   const pin = await getSetting('pin');
   return new Promise(resolve => {
     const m = modal(`
-      <h2>Enter PIN</h2>
-      <p>Editing, IDs and documents are locked.</p>
-      <div class="field"><input class="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="PIN"></div>
+      <h2>${t('Enter PIN')}</h2>
+      <p>${t('Editing, IDs and documents are locked.')}</p>
+      <div class="field"><input class="pin-input" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="${t('PIN')}"></div>
       <div class="err" role="alert"></div>
-      <div class="row"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>Unlock</button></div>`);
+      <div class="row"><button class="btn" data-x>${t('Cancel')}</button><button class="btn primary" data-ok>${t('Unlock')}</button></div>`);
     const input = $('input', m), err = $('.err', m);
     const done = ok => { m.remove(); resolve(ok); };
     const tryIt = async () => {
       if ((await hashPin(input.value, pin.salt)) === pin.hash) {
         unlockedUntil = Date.now() + LOCK_AFTER_MS; done(true);
-      } else { err.textContent = 'Wrong PIN.'; input.value = ''; input.focus(); }
+      } else { err.textContent = t('Wrong PIN.'); input.value = ''; input.focus(); }
     };
     $('[data-x]', m).onclick = () => done(false);
     $('[data-ok]', m).onclick = tryIt;
@@ -861,7 +920,7 @@ function modal(html) {
 function confirmBox(title, text, okLabel, danger) {
   return new Promise(resolve => {
     const m = modal(`<h2>${esc(title)}</h2>${text ? `<p>${esc(text)}</p>` : ''}
-      <div class="row"><button class="btn" data-x>Cancel</button><button class="btn ${danger ? 'danger' : 'primary'}" data-ok>${esc(okLabel)}</button></div>`);
+      <div class="row"><button class="btn" data-x>${t('Cancel')}</button><button class="btn ${danger ? 'danger' : 'primary'}" data-ok>${esc(okLabel)}</button></div>`);
     $('[data-x]', m).onclick = () => { m.remove(); resolve(false); };
     $('[data-ok]', m).onclick = () => { m.remove(); resolve(true); };
   });
@@ -934,6 +993,7 @@ window.addEventListener('hashchange', render);
 async function render() {
   const h = location.hash.replace(/^#\/?/, '');
   const parts = h.split('/');
+  lang = uiLang;
   releaseWake();
   stopTimers();
   $$('.modal').forEach(m => m.remove());
@@ -966,32 +1026,34 @@ async function renderHome() {
     const chips = [];
     if (b.blood) chips.push(`<span class="chip">${esc(b.blood)}</span>`);
     const allergies = al.items.filter(i => i.what).map(i => i.what);
-    if (allergies.length) chips.push(`<span class="chip red">Allergic: ${esc(allergies.join(', '))}</span>`);
+    if (allergies.length) chips.push(`<span class="chip red">${esc(t('Allergic: {list}', { list: allergies.join(', ') }))}</span>`);
     const due = vaccineGroups(p).filter(g => g.due);
-    if (due.length) chips.push(`<span class="chip ${due.some(g => g.due === 'over') ? 'red' : 'amber'}">${due.length === 1 ? esc(due[0].name) + (due[0].due === 'over' ? ' overdue' : ' due soon') : due.length + ' vaccines due'}</span>`);
+    if (due.length) chips.push(`<span class="chip ${due.some(g => g.due === 'over') ? 'red' : 'amber'}">${esc(due.length === 1 ? t(due[0].due === 'over' ? '{name} overdue' : '{name} due soon', { name: due[0].name }) : t('{n} vaccines due', { n: due.length }))}</span>`);
     const stale = staleSections(p).length;
-    if (stale) chips.push(`<span class="chip amber">${stale} ${stale === 1 ? 'section' : 'sections'} older than 6 months</span>`);
-    const meta = [age(b.dob), b.sex].filter(Boolean).join(', ');
+    if (stale) chips.push(`<span class="chip amber">${count(stale, '{n} section older than 6 months', '{n} sections older than 6 months')}</span>`);
+    const meta = [age(b.dob), b.sex ? t(b.sex) : ''].filter(Boolean).join(', ');
     return `<a class="card person" href="#/p/${p.id}">
       <div class="avatar">${photo ? `<img alt="" src="${photo}">` : esc(initials(b.name))}</div>
-      <div style="min-width:0"><div class="name">${esc(b.name || 'Unnamed')}${b.goesBy ? ` <span class="muted" style="font-weight:500">(${esc(b.goesBy)})</span>` : ''}</div>
+      <div style="min-width:0"><div class="name">${esc(b.name || t('Unnamed'))}${b.goesBy ? ` <span class="muted" style="font-weight:500">(${esc(b.goesBy)})</span>` : ''}</div>
       ${meta ? `<div class="meta">${esc(meta)}</div>` : ''}
       ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}</div></a>`;
   }));
   app().innerHTML = `
     <header class="bar"><div class="brand">${SWAN}<h1>Medical <span>Info</span></h1></div>
-      <button class="btn sm install" data-install hidden>${ICON.download}Install</button>
-      <a class="btn sm scan" href="#/scan" aria-label="Scan">${ICON.scan}<span>Scan</span></a>
-      <a class="btn icon ghost" href="#/settings" aria-label="Settings">${ICON.gear}</a></header>
+      <button class="btn sm install" data-install hidden>${ICON.download}${t('Install')}</button>
+      <a class="btn sm scan" href="#/scan" aria-label="${t('Scan')}">${ICON.scan}<span>${t('Scan')}</span></a>
+      <a class="btn icon ghost" href="#/settings" aria-label="${t('Settings')}">${ICON.gear}</a></header>
     <main class="wrap">
       ${people.length ? `<div class="people">${cards.join('')}</div>
-        <div class="row" style="margin-top:16px"><button class="btn primary" data-add>${ICON.plus}Add family member</button></div>`
-      : `<div class="card empty"><h2 style="font-size:20px;margin-bottom:8px">Family</h2>
-        <p class="muted">Add each family member and show their page to the doctor in an emergency.</p>
-        <button class="btn primary" data-add>${ICON.plus}Add family member</button></div>`}
+        <div class="row" style="margin-top:16px"><button class="btn primary" data-add>${ICON.plus}${t('Add family member')}</button></div>`
+      : `<div class="card empty"><h2 style="font-size:20px;margin-bottom:8px">${t('Family')}</h2>
+        <p class="muted">${t('Add each family member and show their page to the doctor in an emergency.')}</p>
+        <button class="btn primary" data-add>${ICON.plus}${t('Add family member')}</button></div>`}
+      ${langPicker('app')}
       ${creditHtml()}
     </main>`;
   $$('[data-add]').forEach(b => b.onclick = addPerson);
+  bindLangPicker();
   bindInstall();
 }
 async function addPerson() {
@@ -1043,7 +1105,7 @@ function levelWord(key, r) {
   const lv = key === 'bp' ? bpLevel(r) : sugarLevel(r);
   if (!lv) return '';
   const low = key === 'bp' ? +r.sys < 90 : +r.value < (SUGAR_LIMITS[r.unit] || SUGAR_LIMITS['mg/dL'])[0];
-  return low ? 'Low' : lv === 'lv-hi2' ? 'Very high' : 'High';
+  return t(low ? 'Low' : lv === 'lv-hi2' ? 'Very high' : 'High');
 }
 const flagHtml = (key, r) => { const w = levelWord(key, r); return w ? ` <span class="flag">${w}</span>` : ''; };
 function bpText(r) { return `${r.sys}/${r.dia}`; }
@@ -1053,9 +1115,9 @@ function sugarText(r, unit) {
   return `${u === 'mmol/L' ? v.toFixed(1) : Math.round(v)} ${u}`;
 }
 function readingLine(key, r, absolute) {
-  const w = levelWord(key, r) ? `(${levelWord(key, r).toLowerCase()})` : '';
-  if (key === 'bp') return [fmtWhen(r.when, absolute) + ':', bpText(r), w, r.pulse ? `pulse ${r.pulse}` : '', r.note ? `(${r.note})` : ''].filter(Boolean).join(' ');
-  return [fmtWhen(r.when, absolute) + ':', sugarText(r), w, r.timing ? r.timing.toLowerCase() : '', r.note ? `(${r.note})` : ''].filter(Boolean).join(' ');
+  const w = levelWord(key, r) ? `(${levelWord(key, r)})` : '';
+  if (key === 'bp') return [fmtWhen(r.when, absolute) + ':', bpText(r), w, r.pulse ? t('pulse {n}', { n: r.pulse }) : '', r.note ? `(${r.note})` : ''].filter(Boolean).join(' ');
+  return [fmtWhen(r.when, absolute) + ':', sugarText(r), w, r.timing ? t(r.timing) : '', r.note ? `(${r.note})` : ''].filter(Boolean).join(' ');
 }
 const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
 function lastDays(list, days) { const from = Date.now() - days * DAY; return list.filter(r => whenMs(r) >= from); }
@@ -1089,32 +1151,32 @@ function chartSvg(list, series, refs, step = 10) {
     g += `<path class="l${i + 1}" d="${d}"/>` + pts.map(r => `<circle class="d${i + 1}" cx="${x(whenMs(r)).toFixed(1)}" cy="${y(sr.get(r)).toFixed(1)}" r="3"/>`).join('');
   });
   const d0 = new Date(t0), d1 = new Date(whenMs(pts[pts.length - 1]));
-  g += `<text x="${L}" y="${H - 6}">${d0.getDate()} ${MONTHS[d0.getMonth()]}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${d1.getDate()} ${MONTHS[d1.getMonth()]}</text>`;
-  const legend = series.length > 1 ? `<div class="legend">${series.map((sr, i) => `<span><i class="k${i + 1}"></i>${esc(sr.label)}</span>`).join('')}</div>` : '';
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Readings over the last 30 days">${g}</svg>${legend}`;
+  g += `<text x="${L}" y="${H - 6}">${d0.getDate()} ${monthName(d0.getMonth())}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${d1.getDate()} ${monthName(d1.getMonth())}</text>`;
+  const legend = series.length > 1 ? `<div class="legend">${series.map((sr, i) => `<span><i class="k${i + 1}"></i>${esc(t(sr.label))}</span>`).join('')}</div>` : '';
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('Readings over the last 30 days')}">${g}</svg>${legend}`;
 }
 function logTable(key, list, opts) {
   const desc = [...list].reverse();
   const row = r => key === 'bp'
     ? `<tr><td>${esc(fmtWhen(r.when, opts.print))}</td><td class="num ${bpLevel(r)}">${esc(bpText(r))}${flagHtml('bp', r)}</td><td>${esc(r.pulse || '')}</td><td>${esc(r.note || '')}</td></tr>`
-    : `<tr><td>${esc(fmtWhen(r.when, opts.print))}</td><td class="num ${sugarLevel(r)}">${esc(sugarText(r))}${flagHtml('sugar', r)}</td><td>${esc(r.timing || '')}</td><td>${esc(r.note || '')}</td></tr>`;
-  const head = key === 'bp' ? '<tr><th>Time</th><th>BP</th><th>Pulse</th><th>Note</th></tr>' : '<tr><th>Time</th><th>Sugar</th><th>Taken</th><th>Note</th></tr>';
+    : `<tr><td>${esc(fmtWhen(r.when, opts.print))}</td><td class="num ${sugarLevel(r)}">${esc(sugarText(r))}${flagHtml('sugar', r)}</td><td>${esc(r.timing ? t(r.timing) : '')}</td><td>${esc(r.note || '')}</td></tr>`;
+  const head = `<tr><th>${t('Time')}</th>${key === 'bp' ? `<th>${t('BP')}</th><th>${t('Pulse')}</th>` : `<th>${t('Sugar')}</th><th>${t('Taken')}</th>`}<th>${t('Note')}</th></tr>`;
   const shown = opts.print ? lastDays(desc, 90) : desc.slice(0, 10);
   const rest = opts.print ? [] : desc.slice(10);
   return `<div class="table-scroll"><table class="log"><thead>${head}</thead><tbody>${shown.map(row).join('')}</tbody></table></div>`
-    + (rest.length ? `<details class="more-log"><summary>${rest.length} older ${rest.length === 1 ? 'reading' : 'readings'}</summary><div class="table-scroll"><table class="log"><tbody>${rest.map(row).join('')}</tbody></table></div></details>` : '');
+    + (rest.length ? `<details class="more-log"><summary>${count(rest.length, '{n} older reading', '{n} older readings')}</summary><div class="table-scroll"><table class="log"><tbody>${rest.map(row).join('')}</tbody></table></div></details>` : '');
 }
 function bpBody(p, opts) {
   const list = readings(p, 'bp');
   if (!list.length) return '';
   const last = list[list.length - 1], wk = bpAverage(lastDays(list, 7));
   return `<div class="log-sum">
-      <div><span class="lbl">Latest</span><b class="${bpLevel(last)}">${esc(bpText(last))}${flagHtml('bp', last)}</b><span>${esc([last.pulse ? 'pulse ' + last.pulse : '', fmtWhen(last.when, opts.print)].filter(Boolean).join(', '))}</span></div>
-      ${wk ? `<div><span class="lbl">7-day average</span><b>${esc(wk.text)}</b><span>${wk.pulse ? `pulse ${wk.pulse}, ` : ''}${wk.n} ${wk.n === 1 ? 'reading' : 'readings'}</span></div>` : ''}
+      <div><span class="lbl">${t('Latest')}</span><b class="${bpLevel(last)}">${esc(bpText(last))}${flagHtml('bp', last)}</b><span>${esc([last.pulse ? t('pulse {n}', { n: last.pulse }) : '', fmtWhen(last.when, opts.print)].filter(Boolean).join(', '))}</span></div>
+      ${wk ? `<div><span class="lbl">${t('7-day average')}</span><b>${esc(wk.text)}</b><span>${wk.pulse ? esc(t('pulse {n}', { n: wk.pulse })) + ', ' : ''}${count(wk.n, '{n} reading', '{n} readings')}</span></div>` : ''}
     </div>
     ${chartSvg(list, [{ label: 'Top number', get: r => +r.sys }, { label: 'Bottom number', get: r => +r.dia }], [140, 90])}
     ${logTable('bp', list, opts)}
-    <p class="muted small" style="margin:8px 0 0">High is 140/90 or higher. Red is 180/120 or higher, or a top number under 90.</p>`;
+    <p class="muted small" style="margin:8px 0 0">${t('High is 140/90 or higher. Red is 180/120 or higher, or a top number under 90.')}</p>`;
 }
 function sugarBody(p, opts) {
   const list = readings(p, 'sugar');
@@ -1124,23 +1186,33 @@ function sugarBody(p, opts) {
   const fa = sugarAverage(wk.filter(FASTING), unit), am = sugarAverage(wk.filter(AFTER_MEAL), unit);
   const toUnit = v => unit === 'mmol/L' ? v / 18 : v;
   return `<div class="log-sum">
-      <div><span class="lbl">Latest</span><b class="${sugarLevel(last)}">${esc(sugarText(last))}${flagHtml('sugar', last)}</b><span>${esc([last.timing, fmtWhen(last.when, opts.print)].filter(Boolean).join(', '))}</span></div>
-      ${fa ? `<div><span class="lbl">7-day fasting average</span><b>${esc(fa.text)}</b><span>${fa.n} ${fa.n === 1 ? 'reading' : 'readings'}</span></div>` : ''}
-      ${am ? `<div><span class="lbl">7-day after-meal average</span><b>${esc(am.text)}</b><span>${am.n} ${am.n === 1 ? 'reading' : 'readings'}</span></div>` : ''}
+      <div><span class="lbl">${t('Latest')}</span><b class="${sugarLevel(last)}">${esc(sugarText(last))}${flagHtml('sugar', last)}</b><span>${esc([last.timing ? t(last.timing) : '', fmtWhen(last.when, opts.print)].filter(Boolean).join(', '))}</span></div>
+      ${fa ? `<div><span class="lbl">${t('7-day fasting average')}</span><b>${esc(fa.text)}</b><span>${count(fa.n, '{n} reading', '{n} readings')}</span></div>` : ''}
+      ${am ? `<div><span class="lbl">${t('7-day after-meal average')}</span><b>${esc(am.text)}</b><span>${count(am.n, '{n} reading', '{n} readings')}</span></div>` : ''}
     </div>
     ${chartSvg(list, [{ label: 'Reading', get: r => Math.round(toUnit(mgdl(r)) * 10) / 10 }], unit === 'mmol/L' ? [3.9, 10] : [70, 180], unit === 'mmol/L' ? 1 : 10)}
     ${logTable('sugar', list, opts)}
     <p class="muted small" style="margin:8px 0 0">${unit === 'mmol/L'
-      ? 'High is above 7.2 fasting or before a meal, and above 10 at other times. Red is under 3.9, or 16.7 and higher.'
-      : 'High is above 130 fasting or before a meal, and above 180 at other times. Red is under 70, or 300 and higher.'}</p>`;
+      ? t('High is above 7.2 fasting or before a meal, and above 10 at other times. Red is under 3.9, or 16.7 and higher.')
+      : t('High is above 130 fasting or before a meal, and above 180 at other times. Red is under 70, or 300 and higher.')}</p>`;
 }
 
+// a vaccine picked from the list is shown in the reader's language, whichever language it was typed in
+function vaccineKey(name) {
+  const n = String(name || '').trim().toLowerCase();
+  for (const k of [...VACCINE_NAMES, ...Object.values(OLD_VACCINES)]) {
+    if (k.toLowerCase() === n) return k;
+    for (const L of Object.values(LANGS)) if (L.dict?.[k] && L.dict[k].toLowerCase() === n) return k;
+  }
+  return '';
+}
 function vaccineGroups(p) {
   const items = sec(p, 'vaccines').items.filter(i => itemFilled(i, SEC.vaccines.items));
   const map = new Map();
   for (const it of items) {
-    const name = (it.name || '').trim() || 'Vaccine not named';
-    const k = name.toLowerCase();
+    const known = vaccineKey(it.name);
+    const name = known ? t(known) : (it.name || '').trim() || t('Vaccine not named');
+    const k = known || name.toLowerCase();
     if (!map.has(k)) map.set(k, { name, shots: [] });
     map.get(k).shots.push(it);
   }
@@ -1155,12 +1227,12 @@ function vaccineGroups(p) {
   });
 }
 function shotLine(sh) {
-  const head = [sh.dose, sh.date ? fmtDate(sh.date) : (sh.dose ? 'date not written' : ''), sh.lot ? 'lot ' + sh.lot : '', sh.where].filter(Boolean).join(', ');
+  const head = [sh.dose ? t(sh.dose) : '', sh.date ? fmtDate(sh.date) : (sh.dose ? t('date not written') : ''), sh.lot ? t('lot {lot}', { lot: sh.lot }) : '', sh.where].filter(Boolean).join(', ');
   return [head, sh.notes].filter(Boolean).join('. ');
 }
 function nextLine(g) {
   if (!g.next) return '';
-  return g.due === 'over' ? `Overdue. The next shot was due ${fmtDate(g.next)}` : `Next shot due ${fmtDate(g.next)}`;
+  return t(g.due === 'over' ? 'Overdue. The next shot was due {date}' : 'Next shot due {date}', { date: fmtDate(g.next) });
 }
 function vaccinesBody(p) {
   return `<ul class="items">${vaccineGroups(p).map(g => `<li><div class="main">${esc(g.name)}</div>
@@ -1171,11 +1243,11 @@ function vaccinesBody(p) {
 /* ---------- adding readings ---------- */
 function logInput(f, v) {
   let input;
-  if (f.type === 'select') input = `<select data-log="${f.k}">${f.blank ? '<option value=""></option>' : ''}${f.options.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  if (f.type === 'select') input = `<select data-log="${f.k}">${f.blank ? '<option value=""></option>' : ''}${optionsHtml(f.options, v)}</select>`;
   else if (f.type === 'number') input = `<input type="number" inputmode="decimal" step="any" data-log="${f.k}">`;
   else if (f.type === 'datetime') input = `<input type="datetime-local" data-log="${f.k}" value="${localNow()}">`;
   else input = `<input type="text" data-log="${f.k}" autocomplete="off">`;
-  return `<label class="field"><span>${esc(f.label)}</span>${input}${f.hint && f.type === 'number' ? `<span class="hint">${esc(f.hint)}</span>` : ''}</label>`;
+  return `<label class="field"><span>${esc(t(f.label))}</span>${input}</label>`;
 }
 function logFormHtml(p, s, inModal) {
   const lastUnit = s.key === 'sugar' ? (readings(p, 'sugar').slice(-1)[0]?.unit || 'mg/dL') : '';
@@ -1184,34 +1256,34 @@ function logFormHtml(p, s, inModal) {
   return `<div class="log-form" data-log-form="${s.key}">
     ${logInput(s.items[0])}
     <div class="log-grid">${nums.map(f => logInput(f, f.k === 'unit' ? lastUnit : '')).join('')}</div>
-    <label class="field"><span>${esc(note.label)}</span><input type="text" data-log="note" autocomplete="off"><span class="hint">${esc(note.hint)}</span></label>
+    <label class="field"><span>${esc(t(note.label))}</span><input type="text" data-log="note" autocomplete="off"><span class="hint">${esc(t(note.hint))}</span></label>
     <p class="err" role="alert"></p>
-    <div class="row">${inModal ? '<button type="button" class="btn" data-x>Cancel</button>' : ''}<button type="button" class="btn primary" data-log-add="${s.key}">${ICON.plus}Add reading</button></div></div>`;
+    <div class="row">${inModal ? `<button type="button" class="btn" data-x>${t('Cancel')}</button>` : ''}<button type="button" class="btn primary" data-log-add="${s.key}">${ICON.plus}${t('Add reading')}</button></div></div>`;
 }
 function logListHtml(p, s) {
   const list = [...readings(p, s.key)].reverse();
-  if (!list.length) return '<p class="muted small" style="margin:12px 0 0">No readings yet.</p>';
+  if (!list.length) return `<p class="muted small" style="margin:12px 0 0">${t('No readings yet.')}</p>`;
   return `<div class="log-list">${list.map(r => `<div class="log-row"><div><span class="v ${s.key === 'bp' ? bpLevel(r) : sugarLevel(r)}">${esc(s.key === 'bp' ? bpText(r) : sugarText(r))}${flagHtml(s.key, r)}</span>
-    <span class="m">${esc([s.key === 'bp' && r.pulse ? 'pulse ' + r.pulse : r.timing, fmtWhen(r.when), r.note].filter(Boolean).join(' · '))}</span></div>
-    <button type="button" class="btn sm ghost danger" data-log-del="${esc(r.id)}">Remove</button></div>`).join('')}</div>`;
+    <span class="m">${esc([s.key === 'bp' ? (r.pulse ? t('pulse {n}', { n: r.pulse }) : '') : (r.timing ? t(r.timing) : ''), fmtWhen(r.when), r.note].filter(Boolean).join(' · '))}</span></div>
+    <button type="button" class="btn sm ghost danger" data-log-del="${esc(r.id)}">${t('Remove')}</button></div>`).join('')}</div>`;
 }
 // returns an error message, or '' once the reading is saved
 function addReading(p, key, form) {
   const v = k => ($(`[data-log="${k}"]`, form)?.value || '').trim();
   const when = v('when');
-  if (!when) return 'Choose the time of the reading.';
+  if (!when) return t('Choose the time of the reading.');
   let r;
   if (key === 'bp') {
     const sys = +v('sys'), dia = +v('dia'), pulse = v('pulse');
-    if (!v('sys') || !v('dia')) return 'Write both the top and the bottom number.';
-    if (sys <= dia) return `The top number is always higher than the bottom one. Check ${sys}/${dia}.`;
-    if (sys < 50 || sys > 300 || dia < 20 || dia > 200) return `Check ${sys}/${dia} on the machine.`;
+    if (!v('sys') || !v('dia')) return t('Write both the top and the bottom number.');
+    if (sys <= dia) return t('The top number is always higher than the bottom one. Check {bp}.', { bp: `${sys}/${dia}` });
+    if (sys < 50 || sys > 300 || dia < 20 || dia > 200) return t('Check {bp} on the machine.', { bp: `${sys}/${dia}` });
     r = { sys: String(sys), dia: String(dia), pulse };
   } else {
     const unit = v('unit') || 'mg/dL', val = +v('value');
-    if (!v('value')) return 'Write the reading from the meter.';
+    if (!v('value')) return t('Write the reading from the meter.');
     const okRange = unit === 'mmol/L' ? val >= 0.5 && val <= 55 : val >= 10 && val <= 1000;
-    if (!okRange) return unit === 'mmol/L' && val > 55 ? `${val} looks like mg/dL. Change the unit to mg/dL.` : `Check ${val} ${unit}.`;
+    if (!okRange) return unit === 'mmol/L' && val > 55 ? t('{v} looks like mg/dL. Change the unit to mg/dL.', { v: val }) : t('Check {v}.', { v: `${val} ${unit}` });
     r = { value: String(val), unit, timing: v('timing') };
   }
   const d = sec(p, key);
@@ -1230,7 +1302,7 @@ function resetLogForm(form) {
 async function logFromView(p, key) {
   if (!(await requireUnlock())) return;
   const s = SEC[key];
-  const m = modal(`<h2>${esc(s.title)}</h2><p>${esc(displayName(p))}</p>${logFormHtml(p, s, true)}`);
+  const m = modal(`<h2>${esc(t(s.title))}</h2><p>${esc(displayName(p))}</p>${logFormHtml(p, s, true)}`);
   const form = $('[data-log-form]', m);
   $('[data-x]', m).onclick = () => m.remove();
   $('[data-log-add]', m).onclick = async () => {
@@ -1249,10 +1321,11 @@ function stamp(p, key) {
   const ts = p.updated?.[key];
   if (!ts) return '';
   const stale = isStale(ts);
-  return `<span class="stamp${stale ? ' stale' : ''}">${stale ? 'Updated ' + ago(ts) : 'Updated ' + fmtDate(dayOf(ts))}</span>`;
+  return `<span class="stamp${stale ? ' stale' : ''}">${esc(t('Updated {when}', { when: stale ? ago(ts) : fmtDate(dayOf(ts)) }))}</span>`;
 }
 function valueText(f, v) {
-  if (f.type === 'check') return v ? 'Yes' : '';
+  if (f.type === 'check') return v ? t('Yes') : '';
+  if (f.type === 'select') return t(String(v ?? ''));
   if (f.type === 'date') return fmtDate(v);
   if (f.type === 'datetime') return fmtDose(v);
   return String(v ?? '');
@@ -1262,12 +1335,12 @@ function kvList(p, s, d, skip = []) {
     .map(f => {
       let v = esc(valueText(f, d[f.k]));
       if (f.type === 'tel') v = `<a class="tel" href="tel:${esc(String(d[f.k]).replace(/[^\d+]/g, ''))}">${v}</a>`;
-      return `<dt>${esc(f.label)}</dt><dd>${v}</dd>`;
+      return `<dt>${esc(t(f.label))}</dt><dd>${v}</dd>`;
     });
   return rows.length ? `<dl class="kv">${rows.join('')}</dl>` : '';
 }
 function secCard(p, s, body) {
-  return `<section class="card sec${s.wide ? ' wide' : ''}"><div class="sec-head"><h3>${esc(s.title)}</h3>${stamp(p, s.key)}</div>${body}</section>`;
+  return `<section class="card sec${s.wide ? ' wide' : ''}"><div class="sec-head"><h3>${esc(t(s.title))}</h3>${stamp(p, s.key)}</div>${body}</section>`;
 }
 function telLink(n) { return n ? `<a class="tel" href="tel:${esc(String(n).replace(/[^\d+]/g, ''))}">${esc(n)}</a>` : ''; }
 
@@ -1277,12 +1350,12 @@ function sectionBody(p, key, opts = {}) {
   switch (key) {
     case 'meds': {
       let html = '';
-      if (d.none && !list.length) html += `<p style="margin:0">${esc(s.none)}</p>`;
+      if (d.none && !list.length) html += `<p style="margin:0">${esc(t(s.none))}</p>`;
       if (list.length) html += `<ul class="items">${list.map(m => {
         const top = [m.name, m.dose, m.freq].filter(Boolean).map(esc).join(' &middot; ');
         const sub = [];
-        if (m.reason) sub.push(`For ${esc(m.reason)}`);
-        if (m.last) sub.push(`<span class="dose-now">Last dose ${esc(fmtDose(m.last, opts.print))}</span>`);
+        if (m.reason) sub.push(esc(t('For {reason}', { reason: m.reason })));
+        if (m.last) sub.push(`<span class="dose-now">${esc(t('Last dose {when}', { when: fmtDose(m.last, opts.print) }))}</span>`);
         return `<li><div class="main">${top}</div>${sub.length ? `<div class="sub">${sub.join(' &middot; ')}</div>` : ''}</li>`;
       }).join('')}</ul>`;
       const extra = kvList(p, s, d);
@@ -1290,25 +1363,25 @@ function sectionBody(p, key, opts = {}) {
       return html;
     }
     case 'conditions':
-      return (d.none && !list.length) ? `<p style="margin:0">${esc(s.none)}</p>` : `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.year ? ` <span class="muted" style="font-weight:500">since ${esc(c.year)}</span>` : ''}</div>${c.by ? `<div class="sub">${esc(c.by)}</div>` : ''}</li>`).join('')}</ul>`;
+      return (d.none && !list.length) ? `<p style="margin:0">${esc(t(s.none))}</p>` : `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.year ? ` <span class="muted" style="font-weight:500">${esc(t('since {year}', { year: c.year }))}</span>` : ''}</div>${c.by ? `<div class="sub">${esc(c.by)}</div>` : ''}</li>`).join('')}</ul>`;
     case 'surgeries':
-      return (d.none && !list.length) ? `<p style="margin:0">${esc(s.none)}</p>` : `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.what)}${c.year ? ` <span class="muted" style="font-weight:500">${esc(c.year)}</span>` : ''}</div>${c.where ? `<div class="sub">${esc(c.where)}</div>` : ''}</li>`).join('')}</ul>`;
+      return (d.none && !list.length) ? `<p style="margin:0">${esc(t(s.none))}</p>` : `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.what)}${c.year ? ` <span class="muted" style="font-weight:500">${esc(c.year)}</span>` : ''}</div>${c.where ? `<div class="sub">${esc(c.where)}</div>` : ''}</li>`).join('')}</ul>`;
     case 'contacts':
-      return `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.relation ? ` <span class="muted" style="font-weight:500">${esc(c.relation)}</span>` : ''}</div><div class="sub">${telLink(c.phone)}${c.consent ? ` &middot; <b>Can sign consent</b>` : ''}</div></li>`).join('')}</ul>`;
+      return `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.relation ? ` <span class="muted" style="font-weight:500">${esc(c.relation)}</span>` : ''}</div><div class="sub">${telLink(c.phone)}${c.consent ? ` &middot; <b>${t('Can sign consent')}</b>` : ''}</div></li>`).join('')}</ul>`;
     case 'doctors':
       return `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.specialty ? ` <span class="muted" style="font-weight:500">${esc(c.specialty)}</span>` : ''}</div><div class="sub">${[telLink(c.phone), esc(c.clinic)].filter(Boolean).join(' &middot; ')}</div></li>`).join('')}</ul>`;
     case 'bp': return bpBody(p, opts);
     case 'sugar': return sugarBody(p, opts);
     case 'vaccines': return vaccinesBody(p);
     case 'aids': {
-      const have = s.fields.filter(f => f.type === 'check' && d[f.k]).map(f => f.label);
+      const have = s.fields.filter(f => f.type === 'check' && d[f.k]).map(f => t(f.label));
       const rest = kvList(p, s, d, ['hearing', 'glasses', 'dentures']);
       return (have.length ? `<div class="chips" style="margin:0 0 10px">${have.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : '') + rest;
     }
     case 'women': {
       const dd = { ...d };
       if (d.menopause) dd.lmp = '';
-      return (d.menopause ? '<p style="margin:0 0 8px">Post-menopausal</p>' : '') + kvList(p, s, dd, ['menopause']);
+      return (d.menopause ? `<p style="margin:0 0 8px">${t('Post-menopausal')}</p>` : '') + kvList(p, s, dd, ['menopause']);
     }
     default:
       return kvList(p, s, d);
@@ -1322,7 +1395,7 @@ async function docsBody(p) {
     const isImg = f && /^image\//.test(f.type);
     const u = isImg ? await fileUrl(doc.file) : '';
     return `<button class="doc" data-doc="${i}"><div class="thumb" style="${u ? `background-image:url('${u}')` : ''}">${u ? '' : 'PDF'}</div>
-      <div class="cap"><b>${esc(doc.kind || 'Document')}</b>${esc([doc.label, fmtDate(doc.date)].filter(Boolean).join(', '))}</div></button>`;
+      <div class="cap"><b>${esc(t(doc.kind || 'Document'))}</b>${esc([doc.label, fmtDate(doc.date)].filter(Boolean).join(', '))}</div></button>`;
   }));
   return `<div class="docs">${tiles.join('')}</div>`;
 }
@@ -1330,35 +1403,35 @@ async function docsBody(p) {
 async function viewHtml(p, opts = {}) {
   const b = sec(p, 'basics');
   const photo = opts.print ? '' : await fileUrl(b.photo);
-  const facts = [age(b.dob), b.sex, b.dob ? 'born ' + fmtDate(b.dob) : '', b.weight ? b.weight + ' kg' : '', b.height ? b.height + ' cm' : ''].filter(Boolean).map(esc).join(' &middot; ');
+  const facts = [age(b.dob), b.sex ? t(b.sex) : '', b.dob ? t('born {date}', { date: fmtDate(b.dob) }) : '', b.weight ? b.weight + ' kg' : '', b.height ? b.height + ' cm' : ''].filter(Boolean).map(esc).join(' &middot; ');
   const al = sec(p, 'allergies');
   const allergies = al.items.filter(i => i.what);
   const alerts = sec(p, 'alerts');
   const pills = [];
-  if (alerts.bloodThinner) pills.push('Blood thinner');
-  if (alerts.insulin) pills.push('Insulin');
-  if (alerts.steroids) pills.push('Long-term steroids');
-  if (alerts.pregnant && isFemale(p)) pills.push('Pregnant');
-  if (alerts.noBlood) pills.push('Refuses blood transfusion');
+  if (alerts.bloodThinner) pills.push(t('Blood thinner'));
+  if (alerts.insulin) pills.push(t('Insulin'));
+  if (alerts.steroids) pills.push(t('Long-term steroids'));
+  if (alerts.pregnant && isFemale(p)) pills.push(t('Pregnant'));
+  if (alerts.noBlood) pills.push(t('Refuses blood transfusion'));
   if (alerts.implant) pills.push(alerts.implant);
   if (alerts.codeStatus && alerts.codeStatus.startsWith('Do not')) pills.unshift('DNR');
 
   let allergyBox;
   if (allergies.length) {
-    allergyBox = `<div class="alertbox"><h3>Allergies</h3><ul>${allergies.map(a =>
-      `<li class="allergy">${esc(a.what)}${a.severity ? ` <small>${esc(a.severity)}</small>` : ''}${a.reaction ? `<br><small>${esc(a.reaction)}</small>` : ''}</li>`).join('')}</ul>
+    allergyBox = `<div class="alertbox"><h3>${t('Allergies')}</h3><ul>${allergies.map(a =>
+      `<li class="allergy">${esc(a.what)}${a.severity ? ` <small>${esc(t(a.severity))}</small>` : ''}${a.reaction ? `<br><small>${esc(a.reaction)}</small>` : ''}</li>`).join('')}</ul>
       ${stamp(p, 'allergies') ? `<div style="margin-top:8px">${stamp(p, 'allergies')}</div>` : ''}</div>`;
   } else if (al.none) {
-    allergyBox = `<div class="alertbox calm"><h3>Allergies</h3><div class="allergy">No known allergies</div></div>`;
+    allergyBox = `<div class="alertbox calm"><h3>${t('Allergies')}</h3><div class="allergy">${t('No known allergies')}</div></div>`;
   } else {
-    allergyBox = `<div class="alertbox" style="background:var(--warn-soft);border-color:transparent"><h3 style="color:var(--warn)">Allergies</h3><div>Not filled in</div></div>`;
+    allergyBox = `<div class="alertbox" style="background:var(--warn-soft);border-color:transparent"><h3 style="color:var(--warn)">${t('Allergies')}</h3><div>${t('Not filled in')}</div></div>`;
   }
   const alertLines = [];
-  if (alerts.codeStatus) alertLines.push(`<div class="kv-line"><b>Code status:</b> ${esc(alerts.codeStatus)}</div>`);
-  if (alerts.decider) alertLines.push(`<div class="kv-line"><b>Decides if the patient cannot:</b> ${esc(alerts.decider)}</div>`);
-  if (alerts.directive) alertLines.push(`<div class="kv-line"><b>Advance directive:</b> ${esc(alerts.directive)}</div>`);
-  if (alerts.other) alertLines.push(`<div class="kv-line" style="white-space:pre-wrap"><b>Other alert:</b> ${esc(alerts.other)}</div>`);
-  const alertBox = (pills.length || alertLines.length) ? `<div class="alertbox"><h3>Alerts</h3>
+  if (alerts.codeStatus) alertLines.push(`<div class="kv-line"><b>${t('Code status:')}</b> ${esc(t(alerts.codeStatus))}</div>`);
+  if (alerts.decider) alertLines.push(`<div class="kv-line"><b>${t('Decides if the patient cannot:')}</b> ${esc(alerts.decider)}</div>`);
+  if (alerts.directive) alertLines.push(`<div class="kv-line"><b>${t('Advance directive:')}</b> ${esc(alerts.directive)}</div>`);
+  if (alerts.other) alertLines.push(`<div class="kv-line" style="white-space:pre-wrap"><b>${t('Other alert:')}</b> ${esc(alerts.other)}</div>`);
+  const alertBox = (pills.length || alertLines.length) ? `<div class="alertbox"><h3>${t('Alerts')}</h3>
     ${pills.length ? `<div class="alerts-list">${pills.map(x => `<span class="alert-pill">${esc(x)}</span>`).join('')}</div>` : ''}${alertLines.join('')}</div>` : '';
 
   const unlocked = await isUnlocked();
@@ -1370,8 +1443,8 @@ async function viewHtml(p, opts = {}) {
     if (!hasContent(p, key)) continue;
     if (s.locked && !unlocked) {
       if (opts.print) continue;
-      cards.push(`<section class="card sec${s.wide ? ' wide' : ''}"><div class="sec-head"><h3>${esc(s.title)}</h3></div>
-        <div class="locked"><p>Locked</p><button class="btn sm" data-unlock>${ICON.lock}Enter PIN to show</button></div></section>`);
+      cards.push(`<section class="card sec${s.wide ? ' wide' : ''}"><div class="sec-head"><h3>${esc(t(s.title))}</h3></div>
+        <div class="locked"><p>${t('Locked')}</p><button class="btn sm" data-unlock>${ICON.lock}${t('Enter PIN to show')}</button></div></section>`);
       continue;
     }
     if (key === 'docs') { if (!opts.print) cards.push(secCard(p, s, await docsBody(p))); continue; }
@@ -1382,26 +1455,28 @@ async function viewHtml(p, opts = {}) {
     <section class="card patient">
       <div class="avatar">${photo ? `<img alt="" src="${photo}">` : esc(initials(b.name))}</div>
       <div style="flex:1;min-width:0">
-        <h2>${esc(b.name || 'Unnamed')}</h2>
-        ${b.goesBy ? `<div class="goes">Goes by ${esc(b.goesBy)}</div>` : ''}
+        <h2>${esc(b.name || t('Unnamed'))}</h2>
+        ${b.goesBy ? `<div class="goes">${esc(t('Goes by {name}', { name: b.goesBy }))}</div>` : ''}
         ${facts ? `<div class="facts">${facts}</div>` : ''}
-        ${b.language ? `<div class="muted small" style="margin-top:2px">Speaks ${esc(b.language)}</div>` : ''}
+        ${b.language ? `<div class="muted small" style="margin-top:2px">${esc(t('Speaks {languages}', { languages: b.language }))}</div>` : ''}
       </div>
-      ${b.blood ? `<div class="blood"><span>Blood</span><b>${esc(b.blood === 'Unknown' ? '?' : b.blood)}</b></div>` : ''}
+      ${b.blood ? `<div class="blood"><span>${t('Blood')}</span><b>${esc(b.blood === 'Unknown' ? '?' : b.blood)}</b></div>` : ''}
     </section>
     ${allergyBox}${alertBox}
     <div class="sections">${cards.join('')}</div>
-    ${lastSaved ? `<p class="muted small" style="margin-top:14px">Last changed ${lastSaved}. Filled in by the family.</p>` : ''}`;
+    ${lastSaved ? `<p class="muted small" style="margin-top:14px">${esc(t('Last changed {date}. Filled in by the family.', { date: lastSaved }))}</p>` : ''}`;
 }
 
 async function renderView(p) {
+  const body = await inLangAsync(docLang(), () => viewHtml(p));
   app().innerHTML = `
-    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="Back">${ICON.back}</a><h1>Summary</h1>
-      <a class="btn sm" href="#/p/${p.id}/share">${ICON.card}Share</a>
-      <a class="btn sm" href="#/p/${p.id}/edit">${ICON.edit}Edit</a></header>
-    <main class="wrap">${await viewHtml(p)}
-      <div class="viewfoot"><button class="btn" data-log-view="bp">${ICON.plus}Log blood pressure</button><button class="btn" data-log-view="sugar">${ICON.plus}Log blood sugar</button></div>
+    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="${t('Back')}">${ICON.back}</a><h1>${t('Summary')}</h1>
+      <a class="btn sm" href="#/p/${p.id}/share">${ICON.card}${t('Share')}</a>
+      <a class="btn sm" href="#/p/${p.id}/edit">${ICON.edit}${t('Edit')}</a></header>
+    <main class="wrap">${langPicker('doc')}<div lang="${docLang()}">${body}</div>
+      <div class="viewfoot"><button class="btn" data-log-view="bp">${ICON.plus}${t('Log blood pressure')}</button><button class="btn" data-log-view="sugar">${ICON.plus}${t('Log blood sugar')}</button></div>
     </main>`;
+  bindLangPicker(() => renderView(p));
   $$('[data-log-view]').forEach(b => b.onclick = () => logFromView(p, b.dataset.logView));
   $$('[data-unlock]').forEach(b => b.onclick = async () => { if (await requireUnlock()) renderView(p); });
   $$('[data-doc]').forEach(b => b.onclick = () => {
@@ -1414,7 +1489,7 @@ async function renderView(p) {
 /* ---------- editor ---------- */
 let saveTimer = null;
 let savePromise = Promise.resolve();
-function markSaving() { const el = $('.saved'); if (el) el.textContent = 'Saving'; }
+function markSaving() { const el = $('.saved'); if (el) el.textContent = t('Saving'); }
 function scheduleSave(p) {
   markSaving();
   clearTimeout(saveTimer);
@@ -1423,7 +1498,7 @@ function scheduleSave(p) {
     p.savedAt = Date.now();
     savePromise = DB.put('people', p).then(() => {
       askPersist();
-      const el = $('.saved'); if (el) el.textContent = 'Saved';
+      const el = $('.saved'); if (el) el.textContent = t('Saved');
     });
   }, 350);
 }
@@ -1444,45 +1519,49 @@ let fieldSeq = 0;
 function fieldHtml(f, v, name) {
   const id = 'f' + (++fieldSeq);
   if (f.type === 'check') {
-    return `<label class="check"><input type="checkbox" data-f="${esc(name)}" ${v ? 'checked' : ''}>${esc(f.label)}</label>`;
+    return `<label class="check"><input type="checkbox" data-f="${esc(name)}" ${v ? 'checked' : ''}>${esc(t(f.label))}</label>`;
   }
   let input;
   if (f.type === 'select') {
-    input = `<select id="${id}" data-f="${esc(name)}"><option value=""></option>${f.options.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+    input = `<select id="${id}" data-f="${esc(name)}"><option value=""></option>${optionsHtml(f.options, v)}</select>`;
   } else if (f.type === 'textarea') {
     input = `<textarea id="${id}" data-f="${esc(name)}" rows="3">${esc(v)}</textarea>`;
   } else if (f.type === 'datetime') {
-    input = `<div class="inline"><input id="${id}" type="datetime-local" data-f="${esc(name)}" value="${esc(v)}"><button type="button" class="btn sm" data-now="${esc(name)}">Taken now</button></div>`;
+    input = `<div class="inline"><input id="${id}" type="datetime-local" data-f="${esc(name)}" value="${esc(v)}"><button type="button" class="btn sm" data-now="${esc(name)}">${t('Taken now')}</button></div>`;
   } else {
-    const t = { date: 'date', number: 'number', tel: 'tel' }[f.type] || 'text';
+    const typ = { date: 'date', number: 'number', tel: 'tel' }[f.type] || 'text';
     const extra = f.type === 'number' ? ' inputmode="decimal" step="any"' : '';
-    input = `<input id="${id}" type="${t}" data-f="${esc(name)}" value="${esc(v)}"${extra}${f.list ? ` list="${f.list}"` : ''} autocomplete="off">`;
+    input = `<input id="${id}" type="${typ}" data-f="${esc(name)}" value="${esc(v)}"${extra}${f.list ? ` list="${f.list}"` : ''} autocomplete="off">`;
   }
-  return `<label class="field" for="${id}"><span>${esc(f.label)}</span>${input}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ''}</label>`;
+  return `<label class="field" for="${id}"><span>${esc(t(f.label))}</span>${input}${f.hint ? `<span class="hint">${esc(t(f.hint))}</span>` : ''}</label>`;
+}
+// stored values stay in English so a page reads the same on every phone; only the shown text changes
+function optionsHtml(options, v) {
+  return options.map(o => `<option value="${esc(o)}" ${o === v ? 'selected' : ''}>${esc(t(o))}</option>`).join('');
 }
 
 function editSectionHtml(p, s) {
   const d = sec(p, s.key);
-  let body = s.intro ? `<p class="intro">${esc(s.intro)}</p>` : '';
+  let body = s.intro ? `<p class="intro">${esc(t(s.intro))}</p>` : '';
   if (s.key === 'basics') {
     body += `<div class="photo-pick"><div class="avatar" data-photo-preview>${esc(initials(d.name))}</div>
-      <label class="btn sm">Add photo<input type="file" accept="image/*" data-photo hidden></label>
-      ${d.photo ? '<button type="button" class="btn sm ghost" data-photo-remove>Remove photo</button>' : ''}</div>
-      <p class="hint muted small" style="margin:6px 0 0">A face photo helps staff match the page to the patient.</p>`;
+      <label class="btn sm">${t('Add photo')}<input type="file" accept="image/*" data-photo hidden></label>
+      ${d.photo ? `<button type="button" class="btn sm ghost" data-photo-remove>${t('Remove photo')}</button>` : ''}</div>
+      <p class="hint muted small" style="margin:6px 0 0">${t('A face photo helps staff match the page to the patient.')}</p>`;
   }
   if (s.log) {
     body += logFormHtml(p, s) + `<div data-log-list>${logListHtml(p, s)}</div>`;
     const n = readings(p, s.key).length;
     return `<details class="card edit-sec" data-sec="${s.key}">
-      <summary><h3>${esc(s.title)}</h3>${n ? `<span class="chip">${n} ${n === 1 ? 'reading' : 'readings'}</span>` : ''}${ICON.chev}</summary>
+      <summary><h3>${esc(t(s.title))}</h3>${n ? `<span class="chip">${count(n, '{n} reading', '{n} readings')}</span>` : ''}${ICON.chev}</summary>
       <div class="edit-body">${body}</div></details>`;
   }
   if (s.none) {
-    body += `<label class="check"><input type="checkbox" data-none ${d.none ? 'checked' : ''}>${esc(s.none)}</label>`;
+    body += `<label class="check"><input type="checkbox" data-none ${d.none ? 'checked' : ''}>${esc(t(s.none))}</label>`;
   }
   if (s.items) {
     body += `<div data-items>${d.items.map((it, i) => itemHtml(s, it, i)).join('')}</div>
-      <button type="button" class="btn sm add-item" data-add-item>${ICON.plus}Add ${esc(s.itemName)}</button>`;
+      <button type="button" class="btn sm add-item" data-add-item>${ICON.plus}${esc(t('Add {item}', { item: t(s.itemName) }))}</button>`;
   }
   if (s.fields) {
     const fields = s.fields.filter(f => !f.female || isFemale(p));
@@ -1490,22 +1569,23 @@ function editSectionHtml(p, s) {
   }
   if (s.docs) {
     body += `<div data-docs></div>
-      <label class="btn sm add-item">${ICON.plus}Add photo or PDF<input type="file" accept="image/*,application/pdf" multiple data-add-doc hidden></label>`;
+      <label class="btn sm add-item">${ICON.plus}${t('Add photo or PDF')}<input type="file" accept="image/*,application/pdf" multiple data-add-doc hidden></label>`;
   }
   const ts = p.updated?.[s.key];
-  body += `<div class="sec-actions">${ts ? `<span class="stamp${isStale(ts) ? ' stale' : ''}">Updated ${ago(ts)}</span>` : '<span class="stamp">Not filled in</span>'}
-    <span class="spacer"></span>${ts ? '<button type="button" class="btn sm" data-confirm>Still correct</button>' : ''}</div>`;
+  body += `<div class="sec-actions">${ts ? `<span class="stamp${isStale(ts) ? ' stale' : ''}">${esc(t('Updated {when}', { when: ago(ts) }))}</span>` : `<span class="stamp">${t('Not filled in')}</span>`}
+    <span class="spacer"></span>${ts ? `<button type="button" class="btn sm" data-confirm>${t('Still correct')}</button>` : ''}</div>`;
   const stale = ts && isStale(ts);
   return `<details class="card edit-sec" data-sec="${s.key}" ${s.key === 'basics' ? 'open' : ''}>
-    <summary><h3>${esc(s.title)}${s.locked ? ' <span class="muted" style="font-weight:500;font-size:13px">PIN</span>' : ''}</h3>
-      ${stale ? '<span class="chip amber">Check</span>' : (ts ? '<span class="chip green">Filled</span>' : '')}${ICON.chev}</summary>
+    <summary><h3>${esc(t(s.title))}${s.locked ? ' <span class="muted" style="font-weight:500;font-size:13px">PIN</span>' : ''}</h3>
+      ${stale ? `<span class="chip amber">${t('Check')}</span>` : (ts ? `<span class="chip green">${t('Filled')}</span>` : '')}${ICON.chev}</summary>
     <div class="edit-body">${body}</div></details>`;
 }
 function itemHtml(s, it, i) {
-  const label = s.itemLabel || s.itemName[0].toUpperCase() + s.itemName.slice(1);
+  const word = t(s.itemLabel || s.itemName);
+  const label = word[0].toUpperCase() + word.slice(1);
   return `<div class="item-card" data-item="${i}"><div class="item-top"><b>${esc(label)} ${i + 1}</b>
-    <span class="spacer"></span>${s.key === 'vaccines' ? `<button type="button" class="btn sm" data-booster="${i}">${ICON.plus}Add next shot</button>` : ''}
-    <button type="button" class="btn sm ghost danger" data-remove-item="${i}">Remove</button></div>
+    <span class="spacer"></span>${s.key === 'vaccines' ? `<button type="button" class="btn sm" data-booster="${i}">${ICON.plus}${t('Add next shot')}</button>` : ''}
+    <button type="button" class="btn sm ghost danger" data-remove-item="${i}">${t('Remove')}</button></div>
     <div class="grid2">${s.items.map(f => fieldHtml(f, it[f.k], `${i}.${f.k}`)).join('')}</div></div>`;
 }
 
@@ -1517,8 +1597,8 @@ async function renderDocsEditor(p, root) {
     const f = await DB.get('files', doc.file);
     const isImg = f && /^image\//.test(f.type);
     const u = isImg ? await fileUrl(doc.file) : '';
-    return `<div class="item-card" data-doc-i="${i}"><div class="item-top"><b>Document ${i + 1}</b>
-      <button type="button" class="btn sm ghost danger" data-remove-doc="${i}">Remove</button></div>
+    return `<div class="item-card" data-doc-i="${i}"><div class="item-top"><b>${t('Document')} ${i + 1}</b>
+      <button type="button" class="btn sm ghost danger" data-remove-doc="${i}">${t('Remove')}</button></div>
       <div class="doc-edit" style="margin-top:10px"><button type="button" class="thumb" data-open-doc="${i}" style="border:0;${u ? `background-image:url('${u}')` : ''}">${u ? '' : 'PDF'}</button>
       <div>${fieldHtml({ label: 'Type', type: 'select', options: DOC_KINDS }, doc.kind, `d${i}.kind`)}
       ${fieldHtml({ label: 'Description', hint: 'Example: CBC and creatinine, or 12-lead ECG at rest' }, doc.label, `d${i}.label`)}
@@ -1529,13 +1609,13 @@ async function renderDocsEditor(p, root) {
 
 async function renderEdit(p) {
   app().innerHTML = `
-    <header class="bar"><a class="btn icon ghost" href="#/p/${p.id}" aria-label="Back" >${ICON.back}</a><h1>${esc(displayName(p))}</h1>
-      <span class="saved"></span><a class="btn sm primary" href="#/p/${p.id}">Done</a></header>
+    <header class="bar"><a class="btn icon ghost" href="#/p/${p.id}" aria-label="${t('Back')}">${ICON.back}</a><h1>${esc(displayName(p))}</h1>
+      <span class="saved"></span><a class="btn sm primary" href="#/p/${p.id}">${t('Done')}</a></header>
     <main class="wrap" data-editor>
-      <p class="muted" style="margin:0">Fill in what you know now and come back for the rest. Changes save as you type.</p>
+      <p class="muted" style="margin:0">${t('Fill in what you know now and come back for the rest. Changes save as you type.')}</p>
       ${SECTIONS.filter(s => !s.female || isFemale(p)).map(s => editSectionHtml(p, s)).join('')}
-      <datalist id="vaccine-names">${VACCINE_NAMES.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
-      <div class="row" style="margin-top:24px"><button class="btn danger" data-delete>Delete ${esc(displayName(p))}</button></div>
+      <datalist id="vaccine-names">${VACCINE_NAMES.map(n => `<option value="${esc(t(n))}">`).join('')}</datalist>
+      <div class="row" style="margin-top:24px"><button class="btn danger" data-delete>${esc(t('Delete {name}', { name: displayName(p) }))}</button></div>
     </main>`;
   const root = $('[data-editor]');
   await renderDocsEditor(p, root);
@@ -1570,18 +1650,18 @@ function onEditInput(p, e) {
   }
   touch(p, key);
   scheduleSave(p);
-  if (key === 'basics' && name === 'name') $('.bar h1').textContent = val || 'Unnamed';
+  if (key === 'basics' && name === 'name') $('.bar h1').textContent = val || t('Unnamed');
   if (key === 'basics' && name === 'sex') { flushSave(p).then(() => renderEdit(p)); }
 }
 
 async function onEditClick(p, e) {
-  const t = e.target.closest('button, [data-now]');
-  if (!t) return;
-  const secEl = t.closest('[data-sec]');
+  const btn = e.target.closest('button, [data-now]');
+  if (!btn) return;
+  const secEl = btn.closest('[data-sec]');
   const key = secEl?.dataset.sec, s = SEC[key], d = key ? sec(p, key) : null;
 
-  if (t.matches('[data-delete]')) {
-    const ok = await confirmBox(`Delete ${displayName(p)}?`, 'This removes the profile and its documents from this phone.', 'Delete', true);
+  if (btn.matches('[data-delete]')) {
+    const ok = await confirmBox(t('Delete {name}?', { name: displayName(p) }), t('This removes the profile and its documents from this phone.'), t('Delete'), true);
     if (!ok) return;
     for (const doc of sec(p, 'docs').items) await DB.del('files', doc.file);
     if (sec(p, 'basics').photo) await DB.del('files', sec(p, 'basics').photo);
@@ -1591,8 +1671,8 @@ async function onEditClick(p, e) {
     return;
   }
   if (!s) return;
-  if (t.dataset.logAdd) {
-    const form = t.closest('[data-log-form]');
+  if (btn.dataset.logAdd) {
+    const form = btn.closest('[data-log-form]');
     const err = addReading(p, key, form);
     $('.err', form).textContent = err;
     if (err) return;
@@ -1601,18 +1681,18 @@ async function onEditClick(p, e) {
     $('[data-log-list]', secEl).innerHTML = logListHtml(p, s);
     const n = readings(p, key).length, sum = $('summary', secEl);
     $('.chip', sum)?.remove();
-    sum.querySelector('h3').insertAdjacentHTML('afterend', `<span class="chip">${n} ${n === 1 ? 'reading' : 'readings'}</span>`);
+    sum.querySelector('h3').insertAdjacentHTML('afterend', `<span class="chip">${count(n, '{n} reading', '{n} readings')}</span>`);
     return;
   }
-  if (t.dataset.logDel) {
-    if (!(await confirmBox('Remove this reading?', '', 'Remove', true))) return;
-    d.items = d.items.filter(r => r.id !== t.dataset.logDel);
+  if (btn.dataset.logDel) {
+    if (!(await confirmBox(t('Remove this reading?'), '', t('Remove'), true))) return;
+    d.items = d.items.filter(r => r.id !== btn.dataset.logDel);
     touch(p, key); scheduleSave(p);
     $('[data-log-list]', secEl).innerHTML = logListHtml(p, s);
     return;
   }
-  if (t.dataset.booster !== undefined) {
-    const from = d.items[+t.dataset.booster] || {};
+  if (btn.dataset.booster !== undefined) {
+    const from = d.items[+btn.dataset.booster] || {};
     const NEXT_DOSE = { '1st dose': '2nd dose', '2nd dose': '3rd dose', '3rd dose': '4th dose', 'Yearly shot': 'Yearly shot' };
     d.items.push({ name: from.name || '', dose: NEXT_DOSE[from.dose] || 'Booster' });
     const i = d.items.length - 1;
@@ -1623,53 +1703,53 @@ async function onEditClick(p, e) {
     $(`[data-f="${i}.date"]`, card)?.focus({ preventScroll: true });
     return;
   }
-  if (t.dataset.now !== undefined) {
-    const [i, k] = t.dataset.now.split('.');
+  if (btn.dataset.now !== undefined) {
+    const [i, k] = btn.dataset.now.split('.');
     d.items[+i][k] = localNow();
-    $(`[data-f="${t.dataset.now}"]`, secEl).value = d.items[+i][k];
+    $(`[data-f="${btn.dataset.now}"]`, secEl).value = d.items[+i][k];
     touch(p, key); scheduleSave(p);
-    toast('Last dose set to now.');
+    toast(t('Last dose set to now.'));
     return;
   }
-  if (t.matches('[data-add-item]')) {
+  if (btn.matches('[data-add-item]')) {
     d.items.push({});
     $('[data-items]', secEl).insertAdjacentHTML('beforeend', itemHtml(s, {}, d.items.length - 1));
     $('[data-items] .item-card:last-child input, [data-items] .item-card:last-child select', secEl)?.focus();
     return;
   }
-  if (t.dataset.removeItem !== undefined) {
-    const i = +t.dataset.removeItem;
+  if (btn.dataset.removeItem !== undefined) {
+    const i = +btn.dataset.removeItem;
     const it = d.items[i];
-    if (itemFilled(it, s.items) && !(await confirmBox(`Remove this ${s.itemName}?`, '', 'Remove', true))) return;
+    if (itemFilled(it, s.items) && !(await confirmBox(t('Remove this {item}?', { item: t(s.itemName) }), '', t('Remove'), true))) return;
     d.items.splice(i, 1);
     $('[data-items]', secEl).innerHTML = d.items.map((x, j) => itemHtml(s, x, j)).join('');
     touch(p, key); scheduleSave(p);
     return;
   }
-  if (t.matches('[data-confirm]')) {
+  if (btn.matches('[data-confirm]')) {
     touch(p, key); scheduleSave(p);
     const st = $('.sec-actions .stamp', secEl);
-    st.textContent = 'Updated today'; st.classList.remove('stale');
-    const chip = $('summary .chip', secEl); if (chip) { chip.className = 'chip green'; chip.textContent = 'Filled'; }
+    st.textContent = t('Updated {when}', { when: t('today') }); st.classList.remove('stale');
+    const chip = $('summary .chip', secEl); if (chip) { chip.className = 'chip green'; chip.textContent = t('Filled'); }
     return;
   }
-  if (t.matches('[data-photo-remove]')) {
+  if (btn.matches('[data-photo-remove]')) {
     await DB.del('files', d.photo); d.photo = '';
     touch(p, key); await flushSave(p); scheduleSave(p);
     renderEdit(p);
     return;
   }
-  if (t.dataset.removeDoc !== undefined) {
-    if (!(await confirmBox('Remove this document?', '', 'Remove', true))) return;
-    const i = +t.dataset.removeDoc;
+  if (btn.dataset.removeDoc !== undefined) {
+    if (!(await confirmBox(t('Remove this document?'), '', t('Remove'), true))) return;
+    const i = +btn.dataset.removeDoc;
     await DB.del('files', d.items[i].file);
     d.items.splice(i, 1);
     touch(p, key); scheduleSave(p);
     renderDocsEditor(p, secEl);
     return;
   }
-  if (t.dataset.openDoc !== undefined) {
-    const doc = d.items[+t.dataset.openDoc];
+  if (btn.dataset.openDoc !== undefined) {
+    const doc = d.items[+btn.dataset.openDoc];
     viewFile(doc.file, [doc.kind, doc.label].filter(Boolean).join(': '));
   }
 }
@@ -1698,50 +1778,50 @@ async function addDocs(p, input) {
   scheduleSave(p);
   await flushSave(p);
   renderDocsEditor(p, $('[data-sec="docs"]'));
-  toast(files.length === 1 ? 'Document added.' : `${files.length} documents added.`);
+  toast(count(files.length, '{n} document added.', '{n} documents added.'));
 }
 
 /* ---------- summary text for QR ---------- */
 function summaryText(p, budget) {
   const b = sec(p, 'basics'), al = sec(p, 'allergies'), a = sec(p, 'alerts'), m = sec(p, 'meds');
   const groups = [];
-  groups.push(`MEDICAL INFO: ${b.name || 'Unnamed'}${b.goesBy ? ' (' + b.goesBy + ')' : ''}`);
-  groups.push([b.dob ? `Born ${fmtDate(b.dob)} (${age(b.dob)})` : '', b.sex, b.blood ? 'Blood ' + b.blood : '', b.weight ? b.weight + ' kg' : ''].filter(Boolean).join(', '));
-  const alls = al.items.filter(i => i.what).map(i => i.what + ((i.severity || i.reaction) ? ` (${[i.severity, i.reaction].filter(Boolean).join(': ')})` : ''));
-  groups.push('ALLERGIES: ' + (alls.length ? alls.join('; ') : al.none ? 'none known' : 'not filled in'));
+  groups.push(t('MEDICAL INFO: {name}', { name: (b.name || t('Unnamed')) + (b.goesBy ? ' (' + b.goesBy + ')' : '') }));
+  groups.push([b.dob ? t('Born {date} ({age})', { date: fmtDate(b.dob), age: age(b.dob) }) : '', b.sex ? t(b.sex) : '', b.blood ? t('Blood {type}', { type: t(b.blood) }) : '', b.weight ? b.weight + ' kg' : ''].filter(Boolean).join(', '));
+  const alls = al.items.filter(i => i.what).map(i => i.what + ((i.severity || i.reaction) ? ` (${[i.severity ? t(i.severity) : '', i.reaction].filter(Boolean).join(': ')})` : ''));
+  groups.push(t('ALLERGIES: {list}', { list: alls.length ? alls.join('; ') : t(al.none ? 'none known' : 'not filled in') }));
   const flags = [];
   if (a.codeStatus && a.codeStatus.startsWith('Do not')) flags.push('DNR');
-  if (a.bloodThinner) flags.push('blood thinner');
-  if (a.insulin) flags.push('insulin');
-  if (a.steroids) flags.push('long-term steroids');
-  if (a.pregnant && isFemale(p)) flags.push('pregnant');
-  if (a.noBlood) flags.push('refuses blood transfusion');
+  if (a.bloodThinner) flags.push(t('blood thinner'));
+  if (a.insulin) flags.push(t('insulin'));
+  if (a.steroids) flags.push(t('long-term steroids'));
+  if (a.pregnant && isFemale(p)) flags.push(t('pregnant'));
+  if (a.noBlood) flags.push(t('refuses blood transfusion'));
   if (a.implant) flags.push(a.implant);
-  if (flags.length) groups.push('ALERTS: ' + flags.join('; '));
-  const meds = m.items.filter(i => i.name).map(i => [i.name, i.dose, i.freq].filter(Boolean).join(' ') + (i.last ? `, last dose ${fmtDose(i.last, true)}` : ''));
-  if (meds.length) groups.push('MEDS: ' + meds.join('; '));
-  else if (m.none) groups.push('MEDS: none');
+  if (flags.length) groups.push(t('ALERTS: {list}', { list: flags.join('; ') }));
+  const meds = m.items.filter(i => i.name).map(i => [i.name, i.dose, i.freq].filter(Boolean).join(' ') + (i.last ? ', ' + t('last dose {when}', { when: fmtDose(i.last, true) }) : ''));
+  if (meds.length) groups.push(t('MEDS: {list}', { list: meds.join('; ') }));
+  else if (m.none) groups.push(t('MEDS: {list}', { list: t('none') }));
   const cond = sec(p, 'conditions').items.filter(i => i.name).map(i => i.name + (i.year ? ` (${i.year})` : ''));
-  if (cond.length) groups.push('CONDITIONS: ' + cond.join('; '));
+  if (cond.length) groups.push(t('CONDITIONS: {list}', { list: cond.join('; ') }));
   const contacts = sec(p, 'contacts').items.filter(i => i.name || i.phone);
-  const c1 = contacts[0];
-  if (c1) groups.push('CONTACT: ' + [c1.name, c1.relation ? `(${c1.relation}${c1.consent ? ', can consent' : ''})` : '', c1.phone].filter(Boolean).join(' '));
+  const contactLine = c => t('CONTACT: {who}', { who: [c.name, c.relation ? `(${c.relation}${c.consent ? ', ' + t('can consent') : ''})` : '', c.phone].filter(Boolean).join(' ') });
+  if (contacts[0]) groups.push(contactLine(contacts[0]));
   const surg = sec(p, 'surgeries').items.filter(i => i.what).map(i => i.what + (i.year ? ` ${i.year}` : ''));
-  if (surg.length) groups.push('SURGERY/ADMISSIONS: ' + surg.join('; '));
+  if (surg.length) groups.push(t('SURGERY/ADMISSIONS: {list}', { list: surg.join('; ') }));
   const bl = sec(p, 'baseline');
-  const usual = [bl.bp ? 'BP ' + bl.bp : '', bl.sugar ? 'sugar ' + bl.sugar : '', bl.creatinine ? 'creatinine ' + bl.creatinine : '', bl.mental, bl.mobility].filter(Boolean);
-  if (usual.length) groups.push('USUAL: ' + usual.join('; '));
+  const usual = [bl.bp ? t('BP {v}', { v: bl.bp }) : '', bl.sugar ? t('sugar {v}', { v: bl.sugar }) : '', bl.creatinine ? t('creatinine {v}', { v: bl.creatinine }) : '', bl.mental, bl.mobility].filter(Boolean);
+  if (usual.length) groups.push(t('USUAL: {list}', { list: usual.join('; ') }));
   const bpw = bpAverage(lastDays(readings(p, 'bp'), 7));
-  if (bpw) groups.push(`BP 7-DAY AVERAGE: ${bpw.text} (${bpw.n})`);
-  if (a.codeStatus && !a.codeStatus.startsWith('Do not')) groups.push('CODE STATUS: ' + a.codeStatus);
-  if (a.decider) groups.push('DECIDES: ' + a.decider);
-  for (const c of contacts.slice(1)) groups.push('CONTACT: ' + [c.name, c.relation ? `(${c.relation}${c.consent ? ', can consent' : ''})` : '', c.phone].filter(Boolean).join(' '));
+  if (bpw) groups.push(t('BP 7-DAY AVERAGE: {bp} ({n})', { bp: bpw.text, n: bpw.n }));
+  if (a.codeStatus && !a.codeStatus.startsWith('Do not')) groups.push(t('CODE STATUS: {v}', { v: t(a.codeStatus) }));
+  if (a.decider) groups.push(t('DECIDES: {v}', { v: a.decider }));
+  for (const c of contacts.slice(1)) groups.push(contactLine(c));
   const doc = sec(p, 'doctors').items.find(i => i.name);
-  if (doc) groups.push('DOCTOR: ' + [doc.name, doc.specialty, doc.phone].filter(Boolean).join(', '));
-  if (sec(p, 'care').hospital) groups.push('HOSPITAL: ' + sec(p, 'care').hospital);
+  if (doc) groups.push(t('DOCTOR: {v}', { v: [doc.name, doc.specialty, doc.phone].filter(Boolean).join(', ') }));
+  if (sec(p, 'care').hospital) groups.push(t('HOSPITAL: {v}', { v: sec(p, 'care').hospital }));
 
   const head = madeLine(p);
-  const more = 'More on the family\'s phone.';
+  const more = t('More on the family\'s phone.');
   const enc = s => new TextEncoder().encode(s).length;
   const out = [head];
   let used = enc(head) + 1;
@@ -1752,9 +1832,9 @@ function summaryText(p, budget) {
       // keep a trimmed version of the line when there is room for the start of it
       const room = budget - used - enc(more) - 2;
       if (room > 40) {
-        let t = g;
-        while (enc(t + '...') > room) t = t.slice(0, -1);
-        out.push(t + '...');
+        let part = g;
+        while (enc(part + '...') > room) part = part.slice(0, -1);
+        out.push(part + '...');
       }
       cut = true;
       break;
@@ -1766,10 +1846,10 @@ function summaryText(p, budget) {
 }
 function fmtStamp(ts) {
   const d = new Date(ts);
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getDate()} ${monthName(d.getMonth())} ${yearOf(d.getFullYear())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-function madeLine(p, made = Date.now()) {
-  return `QR made ${fmtStamp(made)}. Info last changed ${fmtDate(dayOf(p.savedAt || made))}.`;
+function madeLine(p, made = Date.now(), printed) {
+  return t(printed ? 'Printed {made}. Info last changed {changed}.' : 'QR made {made}. Info last changed {changed}.', { made: fmtStamp(made), changed: fmtDate(dayOf(p.savedAt || made)) });
 }
 function qrSvg(text) {
   qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
@@ -1779,7 +1859,7 @@ function qrSvg(text) {
   const n = q.getModuleCount(), m = 2;
   let d = '';
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n + 2 * m} ${n + 2 * m}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n + 2 * m} ${n + 2 * m}" shape-rendering="crispEdges" role="img" aria-label="${t('QR code')}"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
 
 /* ---------- wallet card ---------- */
@@ -1788,31 +1868,31 @@ function walletFront(p) {
   const alls = al.items.filter(i => i.what).map(i => i.what);
   const flags = [];
   if (a.codeStatus && a.codeStatus.startsWith('Do not')) flags.push('DNR');
-  if (a.bloodThinner) flags.push('Blood thinner');
-  if (a.insulin) flags.push('Insulin');
-  if (a.steroids) flags.push('Long-term steroids');
-  if (a.noBlood) flags.push('Refuses blood transfusion');
+  if (a.bloodThinner) flags.push(t('Blood thinner'));
+  if (a.insulin) flags.push(t('Insulin'));
+  if (a.steroids) flags.push(t('Long-term steroids'));
+  if (a.noBlood) flags.push(t('Refuses blood transfusion'));
   if (a.implant) flags.push(a.implant);
   const cond = sec(p, 'conditions').items.filter(i => i.name).map(i => i.name);
   const meds = sec(p, 'meds').items.filter(i => i.name).map(i => [i.name, i.dose].filter(Boolean).join(' '));
   const c = sec(p, 'contacts').items.find(i => i.name || i.phone);
-  return `<div class="wcard"><div class="wtop"><span class="plus">+</span>MEDICAL INFO${b.blood && b.blood !== 'Unknown' ? `<span class="bt">${esc(b.blood)}</span>` : ''}</div>
+  return `<div class="wcard" lang="${lang}"><div class="wtop"><span class="plus">+</span>${t('MEDICAL INFO')}${b.blood && b.blood !== 'Unknown' ? `<span class="bt">${esc(b.blood)}</span>` : ''}</div>
     <div class="wbody">
-      <div><div class="wname">${esc(b.name || 'Unnamed')}</div>
-      <div>${esc([b.dob ? 'Born ' + fmtDate(b.dob) : '', b.sex].filter(Boolean).join(', '))}</div></div>
-      <div class="wl wred clip2"><b>Allergies:</b> ${esc(alls.length ? alls.join(', ') : al.none ? 'None known' : 'Not filled in')}</div>
-      ${flags.length ? `<div class="wl wred clip2"><b>Alerts:</b> ${esc(flags.join(', '))}</div>` : ''}
-      ${meds.length ? `<div class="wl clip2"><b>Medicines:</b> ${esc(meds.join(', '))}</div>` : ''}
-      ${cond.length ? `<div class="wl clip2"><b>Conditions:</b> ${esc(cond.join(', '))}</div>` : ''}
-      ${c ? `<div class="wl clip2"><b>Call:</b> ${esc([c.name, c.relation ? `(${c.relation})` : '', c.phone].filter(Boolean).join(' '))}</div>` : ''}
+      <div><div class="wname">${esc(b.name || t('Unnamed'))}</div>
+      <div>${esc([b.dob ? t('Born {date}', { date: fmtDate(b.dob) }) : '', b.sex ? t(b.sex) : ''].filter(Boolean).join(', '))}</div></div>
+      <div class="wl wred clip2"><b>${t('Allergies:')}</b> ${esc(alls.length ? alls.join(', ') : t(al.none ? 'None known' : 'Not filled in'))}</div>
+      ${flags.length ? `<div class="wl wred clip2"><b>${t('Alerts:')}</b> ${esc(flags.join(', '))}</div>` : ''}
+      ${meds.length ? `<div class="wl clip2"><b>${t('Medicines:')}</b> ${esc(meds.join(', '))}</div>` : ''}
+      ${cond.length ? `<div class="wl clip2"><b>${t('Conditions:')}</b> ${esc(cond.join(', '))}</div>` : ''}
+      ${c ? `<div class="wl clip2"><b>${t('Call:')}</b> ${esc([c.name, c.relation ? `(${c.relation})` : '', c.phone].filter(Boolean).join(' '))}</div>` : ''}
     </div></div>`;
 }
 function walletBack(p) {
   const text = summaryText(p, 700);
-  return `<div class="wcard back"><div class="wqr">${qrSvg(text)}</div>
-    <div class="wtext"><b>Scan for the medical summary</b><span>Any phone camera reads it without internet.</span>
-    <span>QR made ${esc(fmtDate(dayOf(Date.now())))}</span><span>Info last changed ${esc(fmtDate(dayOf(p.savedAt || Date.now())))}</span>
-    <span class="wby">MEDICAL INFO SHEET BY CYGNUS SOLUTIONS</span></div></div>`;
+  return `<div class="wcard back" lang="${lang}"><div class="wqr">${qrSvg(text)}</div>
+    <div class="wtext"><b>${t('Scan for the medical summary')}</b><span>${t('Any phone camera reads it without internet.')}</span>
+    <span>${esc(t('QR made {date}', { date: fmtDate(dayOf(Date.now())) }))}</span><span>${esc(t('Info last changed {date}', { date: fmtDate(dayOf(p.savedAt || Date.now())) }))}</span>
+    <span class="wby">${t('MEDICAL INFO SHEET BY CYGNUS SOLUTIONS')}</span></div></div>`;
 }
 
 
@@ -1846,40 +1926,45 @@ async function renderSettings() {
   const pin = await hasPin();
   const people = await DB.all('people');
   app().innerHTML = `
-    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="Back">${ICON.back}</a><h1>Settings</h1></header>
+    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="${t('Back')}">${ICON.back}</a><h1>${t('Settings')}</h1></header>
     <main class="wrap">
-      <section class="card settings-block"><h2>PIN</h2>
-        <p>The PIN locks editing, IDs and documents. The medical summary opens without it since the doctor needs it in an emergency.</p>
-        <p>The PIN stops others from opening these screens and does not encrypt the data.</p>
-        <div class="row">${pin ? '<button class="btn" data-pin>Change PIN</button><button class="btn danger" data-pin-off>Remove PIN</button>' : '<button class="btn primary" data-pin>Set a PIN</button>'}</div>
+      <section class="card settings-block"><h2>${t('Language')}</h2>
+        <p>${t('The language of the app. The summary has its own switch for the language the doctor reads.')}</p>
+        ${langPicker('app')}
       </section>
-      <section class="card settings-block"><h2>Share and back up</h2>
-        <p>Everything is stored on this phone only. Clearing the browser data or uninstalling deletes it, so export a file after big changes.</p>
-        <p>Send the file to family on Messenger or Google Drive so their phones have the same pages. Importing keeps whichever copy of each person was changed last.</p>
+      <section class="card settings-block"><h2>${t('PIN')}</h2>
+        <p>${t('The PIN locks editing, IDs and documents. The medical summary opens without it since the doctor needs it in an emergency.')}</p>
+        <p>${t('The PIN stops others from opening these screens and does not encrypt the data.')}</p>
+        <div class="row">${pin ? `<button class="btn" data-pin>${t('Change PIN')}</button><button class="btn danger" data-pin-off>${t('Remove PIN')}</button>` : `<button class="btn primary" data-pin>${t('Set a PIN')}</button>`}</div>
+      </section>
+      <section class="card settings-block"><h2>${t('Share and back up')}</h2>
+        <p>${t('Everything is stored on this phone only. Clearing the browser data or uninstalling deletes it, so export a file after big changes.')}</p>
+        <p>${t('Send the file to family on Messenger or Google Drive so their phones have the same pages. Importing keeps whichever copy of each person was changed last.')}</p>
         <div class="row">
-          <button class="btn primary" data-export ${people.length ? '' : 'disabled'}>Export all (${people.length})</button>
-          <label class="btn">Import file<input type="file" accept=".json,application/json" data-import hidden></label>
+          <button class="btn primary" data-export ${people.length ? '' : 'disabled'}>${t('Export all ({n})', { n: people.length })}</button>
+          <label class="btn">${t('Import file')}<input type="file" accept=".json,application/json" data-import hidden></label>
         </div>
-        ${people.length > 1 ? `<div class="row">${people.map(p => `<button class="btn sm" data-export-one="${p.id}">Export ${esc(displayName(p))}</button>`).join('')}</div>` : ''}
+        ${people.length > 1 ? `<div class="row">${people.map(p => `<button class="btn sm" data-export-one="${p.id}">${esc(t('Export {name}', { name: displayName(p) }))}</button>`).join('')}</div>` : ''}
       </section>
-      <section class="card settings-block"><h2>Install</h2>
-        ${isInstalled() ? '<p>Installed on this phone. It opens from the home screen and works offline.</p>'
-        : `<p>Installing puts it on the home screen and lets it open with no internet.</p>
-        <p>If the button does not show, open the browser menu and tap Install app or Add to Home screen.</p>
-        <div class="row"><button class="btn primary" data-install hidden>${ICON.download}Install Medical Info</button></div>`}
+      <section class="card settings-block"><h2>${t('Install')}</h2>
+        ${isInstalled() ? `<p>${t('Installed on this phone. It opens from the home screen and works offline.')}</p>`
+        : `<p>${t('Installing puts it on the home screen and lets it open with no internet.')}</p>
+        <p>${t('If the button does not show, open the browser menu and tap Install app or Add to Home screen.')}</p>
+        <div class="row"><button class="btn primary" data-install hidden>${ICON.download}${t('Install Medical Info')}</button></div>`}
       </section>
       <section class="card settings-block"><div class="about">${SWAN}<div>
         <div class="who">Cygnus Solutions</div>
-        <p style="margin-top:2px">Medical Info Sheet is made by Cygnus Solutions and is free to use.</p></div></div>
-        <div class="row"><a class="btn sm" href="${REPO_URL}" target="_blank" rel="noopener">Source on GitHub</a></div>
+        <p style="margin-top:2px">${t('Medical Info Sheet is made by Cygnus Solutions and is free to use.')}</p></div></div>
+        <div class="row"><a class="btn sm" href="${REPO_URL}" target="_blank" rel="noopener">${t('Source on GitHub')}</a></div>
       </section>
     </main>`;
+  bindLangPicker();
   bindInstall();
   $('[data-pin]').onclick = async () => { if (await requireUnlock()) setPinFlow(); };
   const off = $('[data-pin-off]');
   if (off) off.onclick = async () => {
     if (!(await requireUnlock())) return;
-    await DB.del('settings', 'pin'); toast('PIN removed.'); renderSettings();
+    await DB.del('settings', 'pin'); toast(t('PIN removed.')); renderSettings();
   };
   $('[data-export]').onclick = async () => { if (await requireUnlock()) exportPeople(people); };
   $$('[data-export-one]').forEach(b => b.onclick = async () => {
@@ -1889,20 +1974,20 @@ async function renderSettings() {
 }
 
 function setPinFlow() {
-  const m = modal(`<h2>Set a PIN</h2><p>4 to 8 digits.</p>
-    <div class="field"><span>New PIN</span><input class="pin-input" type="password" inputmode="numeric" maxlength="8" data-a autocomplete="new-password"></div>
-    <div class="field"><span>Repeat PIN</span><input class="pin-input" type="password" inputmode="numeric" maxlength="8" data-b autocomplete="new-password"></div>
+  const m = modal(`<h2>${t('Set a PIN')}</h2><p>${t('4 to 8 digits.')}</p>
+    <label class="field"><span>${t('New PIN')}</span><input class="pin-input" type="password" inputmode="numeric" maxlength="8" data-a autocomplete="new-password"></label>
+    <label class="field"><span>${t('Repeat PIN')}</span><input class="pin-input" type="password" inputmode="numeric" maxlength="8" data-b autocomplete="new-password"></label>
     <div class="err" role="alert"></div>
-    <div class="row"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>Save PIN</button></div>`);
+    <div class="row"><button class="btn" data-x>${t('Cancel')}</button><button class="btn primary" data-ok>${t('Save PIN')}</button></div>`);
   const a = $('[data-a]', m), b = $('[data-b]', m), err = $('.err', m);
   $('[data-x]', m).onclick = () => m.remove();
   $('[data-ok]', m).onclick = async () => {
-    if (!/^\d{4,8}$/.test(a.value)) { err.textContent = 'Use 4 to 8 digits.'; return; }
-    if (a.value !== b.value) { err.textContent = 'The two PINs are different.'; return; }
+    if (!/^\d{4,8}$/.test(a.value)) { err.textContent = t('Use 4 to 8 digits.'); return; }
+    if (a.value !== b.value) { err.textContent = t('The two PINs are different.'); return; }
     const salt = uid();
     await setSetting('pin', { salt, hash: await hashPin(a.value, salt) });
     unlockedUntil = Date.now() + LOCK_AFTER_MS;
-    m.remove(); toast('PIN saved.'); renderSettings();
+    m.remove(); toast(t('PIN saved.')); renderSettings();
   };
   setTimeout(() => a.focus(), 50);
 }
@@ -1939,15 +2024,15 @@ async function exportPeople(list) {
   a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  toast(`Saved ${name}`);
+  toast(t('Saved {file}', { file: name }));
 }
 
 async function importFile(file) {
   if (!file) return;
   if (!(await requireUnlock())) return;
   let data;
-  try { data = JSON.parse(await file.text()); } catch (e) { toast(`${file.name} could not be read.`); return; }
-  if (data?.app !== 'medical-info-sheet' || !Array.isArray(data.people)) { toast(`${file.name} is not a Medical Info Sheet export.`); return; }
+  try { data = JSON.parse(await file.text()); } catch (e) { toast(t('{file} could not be read.', { file: file.name })); return; }
+  if (data?.app !== 'medical-info-sheet' || !Array.isArray(data.people)) { toast(t('{file} is not a Medical Info Sheet export.', { file: file.name })); return; }
   let added = 0, updated = 0, kept = 0;
   for (const p of data.people) {
     if (!p || !goodId(p.id) || !p.data) continue;
@@ -1963,10 +2048,10 @@ async function importFile(file) {
   }
   askPersist();
   const parts = [];
-  if (added) parts.push(`${added} added`);
-  if (updated) parts.push(`${updated} updated`);
-  if (kept) parts.push(`${kept} kept since this phone had the newer copy`);
-  toast(parts.length ? parts.join(', ') + '.' : 'No people in this file.', 4000);
+  if (added) parts.push(t('{n} added', { n: added }));
+  if (updated) parts.push(t('{n} updated', { n: updated }));
+  if (kept) parts.push(t('{n} kept since this phone had the newer copy', { n: kept }));
+  toast(parts.length ? parts.join(', ') + '.' : t('No people in this file.'), 4000);
   renderSettings();
 }
 
@@ -1978,105 +2063,93 @@ function lines(arr) { return arr.filter(Boolean); }
 function doctorBlocks(p) {
   const b = sec(p, 'basics'), al = sec(p, 'allergies'), a = sec(p, 'alerts'), m = sec(p, 'meds');
   const blocks = [];
-  const who = [age(b.dob), b.sex].filter(Boolean).join(' ');
+  const block = (title, rows) => { const r = lines(rows); if (r.length) blocks.push(t(title) + '\n' + r.join('\n')); };
+  const who = [age(b.dob), b.sex ? t(b.sex) : ''].filter(Boolean).join(' ');
   blocks.push(lines([
-    `${b.name || 'Unnamed'}${b.goesBy ? ` ("${b.goesBy}")` : ''}`,
-    [who, b.dob ? 'born ' + fmtDate(b.dob) : ''].filter(Boolean).join(', '),
-    [b.blood ? 'Blood type ' + b.blood : '', b.weight ? b.weight + ' kg' : '', b.height ? b.height + ' cm' : ''].filter(Boolean).join(', '),
-    b.language ? 'Speaks ' + b.language : '',
+    `${b.name || t('Unnamed')}${b.goesBy ? ` ("${b.goesBy}")` : ''}`,
+    [who, b.dob ? t('born {date}', { date: fmtDate(b.dob) }) : ''].filter(Boolean).join(', '),
+    [b.blood ? t('Blood type {type}', { type: t(b.blood) }) : '', b.weight ? b.weight + ' kg' : '', b.height ? b.height + ' cm' : ''].filter(Boolean).join(', '),
+    b.language ? t('Speaks {languages}', { languages: b.language }) : '',
   ]).join('\n'));
 
   const alls = al.items.filter(i => i.what);
-  blocks.push('ALLERGIES\n' + (alls.length
-    ? alls.map(i => `- ${i.what}${(i.severity || i.reaction) ? ': ' + [i.severity, i.reaction].filter(Boolean).join(', ').toLowerCase() : ''}`).join('\n')
-    : al.none ? 'No known allergies' : 'Not filled in'));
+  block('ALLERGIES', alls.length
+    ? alls.map(i => `- ${i.what}${(i.severity || i.reaction) ? ': ' + [i.severity ? t(i.severity) : '', i.reaction].filter(Boolean).join(', ') : ''}`)
+    : [t(al.none ? 'No known allergies' : 'Not filled in')]);
 
-  const al2 = lines([
-    a.bloodThinner ? '- On a blood thinner' : '',
-    a.insulin ? '- Uses insulin' : '',
-    a.steroids ? '- Long-term steroids' : '',
-    a.pregnant && isFemale(p) ? '- Pregnant' : '',
-    a.noBlood ? '- Refuses blood transfusion' : '',
-    a.implant ? '- Implant: ' + a.implant : '',
-    a.codeStatus ? 'Code status: ' + a.codeStatus : '',
-    a.decider ? 'Decides if the patient cannot: ' + a.decider : '',
-    a.directive ? 'Advance directive: ' + a.directive : '',
-    a.other ? 'Other: ' + a.other : '',
+  block('ALERTS', [
+    a.bloodThinner ? '- ' + t('On a blood thinner') : '',
+    a.insulin ? '- ' + t('Uses insulin') : '',
+    a.steroids ? '- ' + t('Long-term steroids') : '',
+    a.pregnant && isFemale(p) ? '- ' + t('Pregnant') : '',
+    a.noBlood ? '- ' + t('Refuses blood transfusion') : '',
+    a.implant ? '- ' + t('Implant: {v}', { v: a.implant }) : '',
+    a.codeStatus ? t('Code status:') + ' ' + t(a.codeStatus) : '',
+    a.decider ? t('Decides if the patient cannot:') + ' ' + a.decider : '',
+    a.directive ? t('Advance directive:') + ' ' + a.directive : '',
+    a.other ? t('Other:') + ' ' + a.other : '',
   ]);
-  if (al2.length) blocks.push('ALERTS\n' + al2.join('\n'));
 
-  const meds = m.items.filter(i => i.name).map(i => `- ${[i.name, i.dose, i.freq].filter(Boolean).join(' ')}${i.reason ? ', for ' + i.reason : ''}${i.last ? '. Last dose ' + fmtStamp(i.last) : ''}`);
-  const medLines = lines([...meds, m.supplements ? 'Supplements: ' + m.supplements : '', m.antibiotics ? 'Antibiotics in the last 3 months: ' + m.antibiotics : '']);
-  if (medLines.length) blocks.push('MEDICATIONS\n' + medLines.join('\n'));
-  else if (m.none) blocks.push('MEDICATIONS\nNo regular medicine');
+  const meds = m.items.filter(i => i.name).map(i => `- ${[i.name, i.dose, i.freq].filter(Boolean).join(' ')}${i.reason ? ', ' + t('for {reason}', { reason: i.reason }) : ''}${i.last ? '. ' + t('Last dose {when}', { when: fmtStamp(i.last) }) : ''}`);
+  const medLines = lines([...meds, m.supplements ? t('Supplements:') + ' ' + m.supplements : '', m.antibiotics ? t('Antibiotics in the last 3 months:') + ' ' + m.antibiotics : '']);
+  block('MEDICATIONS', medLines.length ? medLines : [m.none ? t('No regular medicine') : '']);
 
   const cond = sec(p, 'conditions');
-  const condLines = cond.items.filter(i => i.name).map(i => `- ${i.name}${i.year ? ', since ' + i.year : ''}${i.by ? ' (' + i.by + ')' : ''}`);
-  if (condLines.length) blocks.push('PAST MEDICAL HISTORY\n' + condLines.join('\n'));
-  else if (cond.none) blocks.push('PAST MEDICAL HISTORY\nNo known conditions');
+  const condLines = cond.items.filter(i => i.name).map(i => `- ${i.name}${i.year ? ', ' + t('since {year}', { year: i.year }) : ''}${i.by ? ' (' + i.by + ')' : ''}`);
+  block('PAST MEDICAL HISTORY', condLines.length ? condLines : [cond.none ? t('No known conditions') : '']);
 
   const sur = sec(p, 'surgeries');
   const surLines = sur.items.filter(i => i.what).map(i => `- ${[i.what, i.year, i.where].filter(Boolean).join(', ')}`);
-  if (surLines.length) blocks.push('SURGERIES AND ADMISSIONS\n' + surLines.join('\n'));
-  else if (sur.none) blocks.push('SURGERIES AND ADMISSIONS\nNone');
+  block('SURGERIES AND ADMISSIONS', surLines.length ? surLines : [sur.none ? t('None') : '']);
 
   const bl = sec(p, 'baseline');
-  const blLines = lines([
-    bl.bp ? 'Blood pressure ' + bl.bp : '', bl.sugar ? 'Blood sugar ' + bl.sugar : '',
-    bl.creatinine ? 'Creatinine ' + bl.creatinine : '', bl.hba1c ? 'HbA1c ' + bl.hba1c : '',
-    bl.mental ? 'Mental state: ' + bl.mental : '', bl.mobility ? 'Mobility: ' + bl.mobility : '', bl.other ? bl.other : '',
+  block('USUAL CONDITION', [
+    bl.bp ? t('Blood pressure {v}', { v: bl.bp }) : '', bl.sugar ? t('Blood sugar {v}', { v: bl.sugar }) : '',
+    bl.creatinine ? t('Creatinine {v}', { v: bl.creatinine }) : '', bl.hba1c ? t('HbA1c {v}', { v: bl.hba1c }) : '',
+    bl.mental ? t('Mental state:') + ' ' + bl.mental : '', bl.mobility ? t('Mobility:') + ' ' + bl.mobility : '', bl.other ? bl.other : '',
   ]);
-  if (blLines.length) blocks.push('USUAL CONDITION\n' + blLines.join('\n'));
 
   const bpl = readings(p, 'bp'), bpw = bpAverage(lastDays(bpl, 7));
-  if (bpl.length) blocks.push(lines(['BLOOD PRESSURE LOG',
-    bpw ? `Average of the last 7 days: ${bpw.text}${bpw.pulse ? ', pulse ' + bpw.pulse : ''} (${bpw.n} ${bpw.n === 1 ? 'reading' : 'readings'})` : '',
-    ...lastDays(bpl, 30).reverse().slice(0, 40).map(r => '- ' + readingLine('bp', r, true))]).join('\n'));
+  if (bpl.length) block('BLOOD PRESSURE LOG', [
+    bpw ? t('Average of the last 7 days: {bp}', { bp: bpw.text }) + (bpw.pulse ? ', ' + t('pulse {n}', { n: bpw.pulse }) : '') + ` (${count(bpw.n, '{n} reading', '{n} readings')})` : '',
+    ...lastDays(bpl, 30).reverse().slice(0, 40).map(r => '- ' + readingLine('bp', r, true))]);
   const sgl = readings(p, 'sugar');
   if (sgl.length) {
     const unit = sgl[sgl.length - 1].unit || 'mg/dL', wk = lastDays(sgl, 7);
     const fa = sugarAverage(wk.filter(FASTING), unit), am = sugarAverage(wk.filter(AFTER_MEAL), unit);
-    blocks.push(lines(['BLOOD SUGAR LOG',
-      fa ? `Fasting average of the last 7 days: ${fa.text} (${fa.n})` : '',
-      am ? `After-meal average of the last 7 days: ${am.text} (${am.n})` : '',
-      ...lastDays(sgl, 30).reverse().slice(0, 40).map(r => '- ' + readingLine('sugar', r, true))]).join('\n'));
+    block('BLOOD SUGAR LOG', [
+      fa ? t('Fasting average of the last 7 days: {v} ({n})', { v: fa.text, n: fa.n }) : '',
+      am ? t('After-meal average of the last 7 days: {v} ({n})', { v: am.text, n: am.n }) : '',
+      ...lastDays(sgl, 30).reverse().slice(0, 40).map(r => '- ' + readingLine('sugar', r, true))]);
   }
 
   if (isFemale(p)) {
     const w = sec(p, 'women');
-    const wl = lines([w.menopause ? 'Post-menopausal' : (w.lmp ? 'LMP ' + fmtDate(w.lmp) : ''), w.ob, w.notes]);
-    if (wl.length) blocks.push('OB-GYN\n' + wl.join('\n'));
+    block('OB-GYN', [w.menopause ? t('Post-menopausal') : (w.lmp ? t('LMP {date}', { date: fmtDate(w.lmp) }) : ''), w.ob, w.notes]);
   }
 
-  const vl = vaccineGroups(p).map(g => `- ${g.name}: ${g.shots.map(sh => shotLine(sh)).join('; ')}${g.next ? '. ' + nextLine(g) : ''}`);
-  if (vl.length) blocks.push('VACCINES\n' + vl.join('\n'));
+  block('VACCINES', vaccineGroups(p).map(g => `- ${g.name}: ${g.shots.map(sh => shotLine(sh)).join('; ')}${g.next ? '. ' + nextLine(g) : ''}`));
 
   const h = sec(p, 'history');
-  const hl = lines([h.family ? 'Family history: ' + h.family : '', h.smoking ? 'Smoking: ' + h.smoking : '', h.alcohol ? 'Alcohol: ' + h.alcohol : '', h.work ? 'Work: ' + h.work : '']);
-  if (hl.length) blocks.push('FAMILY AND SOCIAL HISTORY\n' + hl.join('\n'));
+  block('FAMILY AND SOCIAL HISTORY', [h.family ? t('Family history:') + ' ' + h.family : '', h.smoking ? t('Smoking:') + ' ' + h.smoking : '', h.alcohol ? t('Alcohol:') + ' ' + h.alcohol : '', h.work ? t('Work:') + ' ' + h.work : '']);
 
   const ai = sec(p, 'aids');
-  const aidList = ['hearing', 'glasses', 'dentures'].filter(k => ai[k]).map(k => SEC.aids.fields.find(f => f.k === k).label);
-  const aiLines = lines([aidList.map((x, i) => i ? x.toLowerCase() : x).join(', '), ai.walking ? 'Walking aid: ' + ai.walking : '', ai.other]);
-  if (aiLines.length) blocks.push('AIDS AND NEEDS\n' + aiLines.join('\n'));
+  const aidList = ['hearing', 'glasses', 'dentures'].filter(k => ai[k]).map(k => t(SEC.aids.fields.find(f => f.k === k).label));
+  block('AIDS AND NEEDS', [aidList.join(', '), ai.walking ? t('Walking aid:') + ' ' + ai.walking : '', ai.other]);
 
-  const cl = sec(p, 'contacts').items.filter(i => i.name || i.phone).map(c => `- ${[c.name, c.relation, c.phone].filter(Boolean).join(', ')}${c.consent ? ', can sign consent' : ''}`);
-  if (cl.length) blocks.push('EMERGENCY CONTACTS\n' + cl.join('\n'));
-
-  const dl = sec(p, 'doctors').items.filter(i => i.name).map(c => `- ${[c.name, c.specialty, c.phone, c.clinic].filter(Boolean).join(', ')}`);
-  if (dl.length) blocks.push('DOCTORS\n' + dl.join('\n'));
+  block('EMERGENCY CONTACTS', sec(p, 'contacts').items.filter(i => i.name || i.phone).map(c => `- ${[c.name, c.relation, c.phone].filter(Boolean).join(', ')}${c.consent ? ', ' + t('can sign consent') : ''}`));
+  block('DOCTORS', sec(p, 'doctors').items.filter(i => i.name).map(c => `- ${[c.name, c.specialty, c.phone, c.clinic].filter(Boolean).join(', ')}`));
 
   const care = sec(p, 'care');
-  const careLines = lines([care.hospital ? 'Preferred hospital: ' + care.hospital : '', care.records ? 'Hospital record number: ' + care.records : '', care.pharmacy ? 'Pharmacy: ' + [care.pharmacy, care.pharmacyPhone].filter(Boolean).join(', ') : '']);
-  if (careLines.length) blocks.push('HOSPITAL AND PHARMACY\n' + careLines.join('\n'));
+  block('HOSPITAL AND PHARMACY', [care.hospital ? t('Preferred hospital:') + ' ' + care.hospital : '', care.records ? t('Hospital record number:') + ' ' + care.records : '', care.pharmacy ? t('Pharmacy:') + ' ' + [care.pharmacy, care.pharmacyPhone].filter(Boolean).join(', ') : '']);
   return blocks;
 }
 
 // Split the history into parts small enough for a phone camera to read off a screen.
 function doctorPages(p, made, maxBytes = 800) {
   const enc = s => new TextEncoder().encode(s).length;
-  const name = sec(p, 'basics').name || 'Patient';
-  const headFor = (i, n) => `MEDICAL HISTORY: ${name}${n > 1 ? `, part ${i} of ${n}` : ''}\n${madeLine(p, made)}`;
+  const name = sec(p, 'basics').name || t('Patient');
+  const headFor = (i, n) => t('MEDICAL HISTORY: {name}', { name }) + (n > 1 ? ', ' + t('part {i} of {n}', { i, n }) : '') + '\n' + madeLine(p, made);
   const room = maxBytes - enc(headFor(9, 9)) - 2;
   const pieces = [];
   for (const block of doctorBlocks(p)) {
@@ -2085,7 +2158,7 @@ function doctorPages(p, made, maxBytes = 800) {
     const [title, ...rest] = block.split('\n');
     let cur = title;
     for (const ln of rest) {
-      if (enc(cur + '\n' + ln) > room) { pieces.push(cur); cur = title + ' (continued)'; }
+      if (enc(cur + '\n' + ln) > room) { pieces.push(cur); cur = title + ' ' + t('(continued)'); }
       cur += '\n' + ln;
     }
     pieces.push(cur);
@@ -2133,39 +2206,40 @@ async function syncFrames(p) {
 
 async function renderShare(p, tab) {
   if (tab === 'sync' && !(await requireUnlock())) { location.hash = `#/p/${p.id}/share/doctor`; return; }
-  const tabs = [['doctor', 'For the doctor'], ['sync', 'Family sync'], ['card', 'Wallet card']];
-  const made = Date.now();
+  const tabs = [['doctor', t('For the doctor')], ['sync', t('Family sync')], ['card', t('Wallet card')]];
+  const made = Date.now(), dl = docLang();
   let body = '';
   if (tab === 'doctor') {
     body = `<div class="qr-big" data-qr></div>
-      <div class="pager"><button class="btn sm" data-prev>Back</button><b data-count></b><button class="btn sm" data-next>Next</button></div>
-      <p class="muted center">The doctor scans each part with the phone camera and gets the history as text to review and copy into the chart.</p>
-      <details class="card textview"><summary>Show the text</summary><pre data-text></pre></details>
-      <div class="row center-row"><button class="btn" data-copy>Copy all text</button></div>`;
+      <div class="pager"><button class="btn sm" data-prev>${t('Back')}</button><b data-count></b><button class="btn sm" data-next>${t('Next')}</button></div>
+      <p class="muted center">${t('The doctor scans each part with the phone camera and gets the history as text to review and copy into the chart.')}</p>
+      <details class="card textview"><summary>${t('Show the text')}</summary><pre data-text lang="${dl}"></pre></details>
+      <div class="row center-row"><button class="btn" data-copy>${t('Copy all text')}</button></div>`;
   } else if (tab === 'sync') {
     body = `<div class="qr-big" data-qr></div>
       <div class="pager"><b data-count></b></div>
-      <p class="muted center">On the other phone, open Medical Info Sheet, press Scan and hold it over this code until every part is read. Keep this screen bright.</p>
-      <p class="muted center small">Photos and documents stay out of the code since they are too large for it. Send those with Export in Settings.</p>`;
+      <p class="muted center">${t('On the other phone, open Medical Info Sheet, press Scan and hold it over this code until every part is read. Keep this screen bright.')}</p>
+      <p class="muted center small">${t('Photos and documents stay out of the code since they are too large for it. Send those with Export in Settings.')}</p>`;
   } else {
-    body = `<div class="cardpair"><div class="cardscale">${walletFront(p)}</div><div class="cardscale">${walletBack(p)}</div></div>
+    body = `<div class="cardpair"><div class="cardscale">${inLang(dl, () => walletFront(p))}</div><div class="cardscale">${inLang(dl, () => walletBack(p))}</div></div>
       <div class="row center-row">
-        <button class="btn primary" data-print-card>Print wallet card</button>
-        <button class="btn" data-print-sheet>Print full sheet</button>
+        <button class="btn primary" data-print-card>${t('Print wallet card')}</button>
+        <button class="btn" data-print-sheet>${t('Print full sheet')}</button>
       </div>
-      <p class="muted small center">Print the card at 100% scale, cut it out and fold it along the middle. Reprint it after changing medicines or allergies since the QR on it keeps the date it was printed.</p>`;
+      <p class="muted small center">${t('Print the card at 100% scale, cut it out and fold it along the middle. Reprint it after changing medicines or allergies since the QR on it keeps the date it was printed.')}</p>`;
   }
   app().innerHTML = `
-    <header class="bar"><a class="btn icon ghost" href="#/p/${p.id}" aria-label="Back">${ICON.back}</a><h1>Share ${esc(sec(p, 'basics').goesBy || displayName(p))}</h1></header>
-    <nav class="tabs" aria-label="Share options">${tabs.map(([k, label]) => `<a href="#/p/${p.id}/share/${k}" class="${k === tab ? 'on' : ''}">${label}</a>`).join('')}</nav>
-    <main class="wrap cardview">${body}</main>`;
+    <header class="bar"><a class="btn icon ghost" href="#/p/${p.id}" aria-label="${t('Back')}">${ICON.back}</a><h1>${esc(t('Share {name}', { name: sec(p, 'basics').goesBy || displayName(p) }))}</h1></header>
+    <nav class="tabs" aria-label="${t('Share options')}">${tabs.map(([k, label]) => `<a href="#/p/${p.id}/share/${k}" class="${k === tab ? 'on' : ''}">${label}</a>`).join('')}</nav>
+    <main class="wrap cardview">${tab === 'sync' ? '' : langPicker('doc')}${body}</main>`;
+  bindLangPicker(() => renderShare(p, tab));
 
   if (tab === 'doctor') {
-    const pages = doctorPages(p, made);
+    const pages = inLang(dl, () => doctorPages(p, made));
     let i = 0;
     const show = () => {
       $('[data-qr]').innerHTML = qrSvg(pages[i]);
-      $('[data-count]').textContent = pages.length > 1 ? `Part ${i + 1} of ${pages.length}` : 'One part';
+      $('[data-count]').textContent = pages.length > 1 ? t('Part {i} of {n}', { i: i + 1, n: pages.length }) : t('One part');
       $('[data-prev]').disabled = i === 0;
       $('[data-next]').disabled = i === pages.length - 1;
       $('.pager').classList.toggle('single', pages.length === 1);
@@ -2174,11 +2248,11 @@ async function renderShare(p, tab) {
     $('[data-next]').onclick = () => { if (i < pages.length - 1) { i++; show(); } };
     show();
     const full = pages.map(x => x.split('\n\n').slice(1).join('\n\n')).join('\n\n');
-    const allText = `MEDICAL HISTORY: ${displayName(p)}\n${madeLine(p, made)}\n\n${full}`;
+    const allText = inLang(dl, () => `${t('MEDICAL HISTORY: {name}', { name: displayName(p) })}\n${madeLine(p, made)}\n\n${full}`);
     $('[data-text]').textContent = allText;
     $('[data-copy]').onclick = async () => {
-      try { await navigator.clipboard.writeText(allText); toast('Text copied.'); }
-      catch (e) { toast('Copy is blocked in this browser.'); }
+      try { await navigator.clipboard.writeText(allText); toast(t('Text copied.')); }
+      catch (e) { toast(t('Copy is blocked in this browser.')); }
     };
     holdWake();
   } else if (tab === 'sync') {
@@ -2187,7 +2261,7 @@ async function renderShare(p, tab) {
     let i = 0;
     const show = () => {
       $('[data-qr]').innerHTML = svgs[i];
-      $('[data-count]').textContent = frames.length > 1 ? `Part ${i + 1} of ${frames.length}, repeating` : 'One part';
+      $('[data-count]').textContent = frames.length > 1 ? t('Part {i} of {n}, repeating', { i: i + 1, n: frames.length }) : t('One part');
       i = (i + 1) % frames.length;
     };
     show();
@@ -2196,9 +2270,9 @@ async function renderShare(p, tab) {
   } else {
     fitCards();
     window.onresize = () => { if ($('.cardscale')) fitCards(); };
-    $('[data-print-card]').onclick = () => printNow(`<div class="pcards">${walletFront(p)}${walletBack(p)}</div>
-      <p class="pnote">${esc(displayName(p))}. Cut around the outer line, fold along the middle and laminate it or keep it in a card sleeve.</p>`);
-    $('[data-print-sheet]').onclick = async () => printNow(`<div class="psheet"><p class="pmade">${esc(madeLine(p).replace('QR made', 'Printed'))}</p>${await viewHtml(p, { print: true })}<p class="pby">Made with Medical Info Sheet, a free app by Cygnus Solutions. ${APP_URL}</p></div>`);
+    $('[data-print-card]').onclick = () => printNow(`<div class="pcards">${inLang(dl, () => walletFront(p) + walletBack(p))}</div>
+      <p class="pnote">${esc(displayName(p))}. ${t('Cut around the outer line, fold along the middle and laminate it or keep it in a card sleeve.')}</p>`);
+    $('[data-print-sheet]').onclick = async () => printNow(await inLangAsync(dl, async () => `<div class="psheet" lang="${dl}"><p class="pmade">${esc(madeLine(p, Date.now(), true))}</p>${await viewHtml(p, { print: true })}<p class="pby">${t('Made with Medical Info Sheet, a free app by Cygnus Solutions.')} ${APP_URL}</p></div>`));
   }
 }
 
@@ -2223,17 +2297,17 @@ let incoming = null;
 async function renderScan() {
   if (!(await requireUnlock())) { location.hash = '#/'; return; }
   app().innerHTML = `
-    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="Back">${ICON.back}</a><h1>Scan family sync code</h1></header>
+    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="${t('Back')}">${ICON.back}</a><h1>${t('Scan family sync code')}</h1></header>
     <main class="wrap scan">
       <div class="cam"><video playsinline muted></video><div class="cam-frame"></div></div>
-      <p class="scan-status" data-status>Point the camera at the code on the other phone.</p>
+      <p class="scan-status" data-status>${t('Point the camera at the code on the other phone.')}</p>
       <div class="scan-bar"><span data-bar></span></div>
     </main>`;
   const video = $('video'), status = $('[data-status]'), bar = $('[data-bar]');
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
   } catch (e) {
-    status.textContent = 'The camera could not be opened. Allow camera access for this app in the browser settings.';
+    status.textContent = t('The camera could not be opened. Allow camera access for this app in the browser settings.');
     return;
   }
   video.srcObject = camStream;
@@ -2243,7 +2317,7 @@ async function renderScan() {
     if ('BarcodeDetector' in window && (await BarcodeDetector.getSupportedFormats()).includes('qr_code')) detector = new BarcodeDetector({ formats: ['qr_code'] });
   } catch (e) { detector = null; }
   const jsqr = detector ? null : await loadJsQR().catch(() => null);
-  if (!detector && !jsqr) { status.textContent = 'This browser cannot read QR codes.'; return; }
+  if (!detector && !jsqr) { status.textContent = t('This browser cannot read QR codes.'); return; }
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -2253,16 +2327,16 @@ async function renderScan() {
   const handle = async text => {
     const m = /^MIS1\|(\w+)\|(\d+)\|(\d+)\|(.*)$/s.exec(text || '');
     if (!m) {
-      if (Date.now() - lastWarn > 3000) { lastWarn = Date.now(); status.textContent = 'That code is not a family sync code. Open Share, then Family sync on the other phone.'; }
+      if (Date.now() - lastWarn > 3000) { lastWarn = Date.now(); status.textContent = t('That code is not a family sync code. Open Share, then Family sync on the other phone.'); }
       return;
     }
     if (sid !== m[1]) { sid = m[1]; parts.clear(); total = +m[3]; }
     parts.set(+m[2], m[4]);
-    status.textContent = `Read ${parts.size} of ${total} parts.`;
+    status.textContent = t('Read {i} of {n} parts.', { i: parts.size, n: total });
     bar.style.width = (parts.size / total * 100) + '%';
     if (parts.size === total) {
       stopCamera();
-      status.textContent = 'All parts read.';
+      status.textContent = t('All parts read.');
       try {
         const packed = Array.from({ length: total }, (_, i) => parts.get(i + 1)).join('');
         const data = JSON.parse(await unpackText(packed));
@@ -2270,7 +2344,7 @@ async function renderScan() {
         incoming = { p: data.p, made: data.made };
         location.hash = '#/merge';
       } catch (e) {
-        status.textContent = 'The code could not be read. Open Family sync again on the other phone and rescan.';
+        status.textContent = t('The code could not be read. Open Family sync again on the other phone and rescan.');
       }
     }
   };
@@ -2300,16 +2374,16 @@ async function renderScan() {
 
 /* ---------- reviewing and applying a scanned update ---------- */
 function fieldShow(f, v) {
-  if (f.type === 'check') return v ? 'Yes' : 'No';
+  if (f.type === 'check') return t(v ? 'Yes' : 'No');
   if (!filled(v)) return '';
   return valueText(f, v);
 }
 function listShow(s, d) {
   if (s.log) return [...(d?.items || [])].filter(r => r.when).sort((a, b) => b.when.localeCompare(a.when)).map(r => readingLine(s.key, r, true));
-  if (s.key === 'vaccines') return (d?.items || []).filter(i => itemFilled(i, s.items)).map(i => `${i.name || 'Vaccine'}: ${shotLine(i)}${i.next ? ', next due ' + fmtDate(i.next) : ''}`);
+  if (s.key === 'vaccines') return (d?.items || []).filter(i => itemFilled(i, s.items)).map(i => `${vaccineKey(i.name) ? t(vaccineKey(i.name)) : i.name || t('Vaccine')}: ${shotLine(i)}${i.next ? ', ' + t('next due {date}', { date: fmtDate(i.next) }) : ''}`);
   const items = (d?.items || []).filter(i => itemFilled(i, s.items));
-  const out = items.map(i => s.items.map(f => f.type === 'check' ? (i[f.k] ? f.label.toLowerCase() : '') : (f.type === 'datetime' && i[f.k] ? 'last dose ' + fmtStamp(i[f.k]) : i[f.k])).filter(Boolean).join(', '));
-  if (!out.length && d?.none) out.push(s.none);
+  const out = items.map(i => s.items.map(f => f.type === 'check' ? (i[f.k] ? t(f.label) : '') : f.type === 'datetime' && i[f.k] ? t('last dose {when}', { when: fmtStamp(i[f.k]) }) : f.type === 'select' && i[f.k] ? t(i[f.k]) : i[f.k]).filter(Boolean).join(', '));
+  if (!out.length && d?.none) out.push(t(s.none));
   return out;
 }
 const solid = o => JSON.stringify(Object.keys(o || {}).sort().filter(k => filled(o[k])).map(k => [k, o[k]]));
@@ -2371,59 +2445,60 @@ async function renderMerge() {
   const theirs = incoming.p;
   const people = await DB.all('people');
   let mine = people.find(x => x.id === theirs.id) || null;
-  const nameOf = x => sec(x, 'basics').name || 'Unnamed';
+  const nameOf = x => sec(x, 'basics').name || t('Unnamed');
 
   if (!mine && !incoming.target) {
     const sameName = people.find(x => nameOf(x).trim().toLowerCase() === nameOf(theirs).trim().toLowerCase());
     app().innerHTML = `
-      <header class="bar"><a class="btn icon ghost" href="#/" aria-label="Back" data-cancel>${ICON.back}</a><h1>Scanned ${esc(nameOf(theirs))}</h1></header>
+      <header class="bar"><a class="btn icon ghost" href="#/" aria-label="${t('Back')}" data-cancel>${ICON.back}</a><h1>${esc(t('Scanned {name}', { name: nameOf(theirs) }))}</h1></header>
       <main class="wrap">
         <section class="card settings-block"><h2>${esc(nameOf(theirs))}</h2>
-          <p>QR made ${esc(fmtStamp(incoming.made))}. Info last changed ${esc(fmtDate(dayOf(theirs.savedAt || incoming.made)))}.</p>
-          <p>This phone has no page linked to this person yet. Add them as a new person, or pick the page that is the same person to compare and merge.</p>
-          <div class="field"><span>Same person as</span><select data-target><option value="">Nobody here, add as new</option>
-            ${people.map(x => `<option value="${x.id}" ${sameName && sameName.id === x.id ? 'selected' : ''}>${esc(nameOf(x))}</option>`).join('')}</select></div>
-          <div class="row"><button class="btn" data-cancel>Cancel</button><button class="btn primary" data-go>Continue</button></div>
+          <p>${esc(madeLine(theirs, incoming.made))}</p>
+          <p>${t('This phone has no page linked to this person yet. Add them as a new person, or pick the page that is the same person to compare and merge.')}</p>
+          <label class="field"><span>${t('Same person as')}</span><select data-target><option value="">${t('Nobody here, add as new')}</option>
+            ${people.map(x => `<option value="${x.id}" ${sameName && sameName.id === x.id ? 'selected' : ''}>${esc(nameOf(x))}</option>`).join('')}</select></label>
+          <div class="row"><button class="btn" data-cancel>${t('Cancel')}</button><button class="btn primary" data-go>${t('Continue')}</button></div>
         </section>
       </main>`;
     $$('[data-cancel]').forEach(b => b.onclick = () => { incoming = null; location.hash = '#/'; });
     $('[data-go]').onclick = async () => {
-      const t = $('[data-target]').value;
-      if (!t) {
+      const target = $('[data-target]').value;
+      if (!target) {
         theirs.created = theirs.created || Date.now();
         await DB.put('people', theirs);
         askPersist();
         incoming = null;
-        toast(`${nameOf(theirs)} added.`);
+        toast(t('{name} added.', { name: nameOf(theirs) }));
         location.hash = `#/p/${theirs.id}`;
         return;
       }
-      incoming.target = t;
+      incoming.target = target;
       renderMerge();
     };
     return;
   }
   if (!mine) mine = people.find(x => x.id === incoming.target);
   const diffs = diffPeople(mine, theirs);
-  const when = ts => ts ? 'changed ' + fmtStamp(ts) : 'never filled in';
-  const val = v => Array.isArray(v) ? (v.length ? v.map(x => `<div>${esc(x)}</div>`).join('') : '<span class="muted">Empty</span>') : (v ? esc(v) : '<span class="muted">Empty</span>');
+  const when = ts => ts ? t('changed {when}', { when: fmtStamp(ts) }) : t('never filled in');
+  const empty = `<span class="muted">${t('Empty')}</span>`;
+  const val = v => Array.isArray(v) ? (v.length ? v.map(x => `<div>${esc(x)}</div>`).join('') : empty) : (v ? esc(v) : empty);
 
   app().innerHTML = `
-    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="Back" data-cancel>${ICON.back}</a><h1>Review ${esc(nameOf(mine))}</h1></header>
+    <header class="bar"><a class="btn icon ghost" href="#/" aria-label="${t('Back')}" data-cancel>${ICON.back}</a><h1>${esc(t('Review {name}', { name: nameOf(mine) }))}</h1></header>
     <main class="wrap">
-      <p class="muted" style="margin:0">QR made ${esc(fmtStamp(incoming.made))}. ${diffs.length
-        ? `${diffs.length} ${diffs.length === 1 ? 'difference' : 'differences'} found. Pick which one to keep for each. The newer one is already picked.`
-        : 'Everything already matches this phone.'}</p>
+      <p class="muted" style="margin:0">${esc(t('QR made {made}.', { made: fmtStamp(incoming.made) }))} ${diffs.length
+        ? count(diffs.length, '{n} difference found. Pick which one to keep for each. The newer one is already picked.', '{n} differences found. Pick which one to keep for each. The newer one is already picked.')
+        : t('Everything already matches this phone.')}</p>
       ${diffs.map((d, i) => `<section class="card diff">
-        <div class="sec-head"><h3>${esc(d.s.title)}${d.f ? ': ' + esc(d.f.label) : ''}</h3></div>
+        <div class="sec-head"><h3>${esc(t(d.s.title))}${d.f ? ': ' + esc(t(d.f.label)) : ''}</h3></div>
         <label class="opt"><input type="radio" name="d${i}" value="mine" ${d.choice === 'mine' ? 'checked' : ''}>
-          <span><b>This phone</b> <span class="muted small">${when(d.tm)}</span><span class="v">${val(d.mineV)}</span></span></label>
+          <span><b>${t('This phone')}</b> <span class="muted small">${when(d.tm)}</span><span class="v">${val(d.mineV)}</span></span></label>
         <label class="opt"><input type="radio" name="d${i}" value="theirs" ${d.choice === 'theirs' ? 'checked' : ''}>
-          <span><b>Scanned</b> <span class="muted small">${when(d.tt)}</span><span class="v">${val(d.theirV)}</span></span></label>
-        ${d.kind === 'list' ? `<label class="opt"><input type="radio" name="d${i}" value="both" ${d.choice === 'both' ? 'checked' : ''}><span><b>Keep both lists</b> <span class="muted small">entries from each, without repeats</span></span></label>` : ''}
+          <span><b>${t('Scanned')}</b> <span class="muted small">${when(d.tt)}</span><span class="v">${val(d.theirV)}</span></span></label>
+        ${d.kind === 'list' ? `<label class="opt"><input type="radio" name="d${i}" value="both" ${d.choice === 'both' ? 'checked' : ''}><span><b>${t('Keep both lists')}</b> <span class="muted small">${t('entries from each, without repeats')}</span></span></label>` : ''}
       </section>`).join('')}
-      <div class="row" style="margin-top:16px"><button class="btn" data-cancel>Cancel</button>
-        ${diffs.length ? '<button class="btn primary" data-apply>Apply</button>' : '<button class="btn primary" data-link>Done</button>'}</div>
+      <div class="row" style="margin-top:16px"><button class="btn" data-cancel>${t('Cancel')}</button>
+        ${diffs.length ? `<button class="btn primary" data-apply>${t('Apply')}</button>` : `<button class="btn primary" data-link>${t('Done')}</button>`}</div>
     </main>`;
   $$('[data-cancel]').forEach(b => b.onclick = () => { incoming = null; location.hash = '#/'; });
   const finish = async merged => {
@@ -2439,7 +2514,7 @@ async function renderMerge() {
     diffs.forEach((d, i) => { d.choice = $(`input[name="d${i}"]:checked`).value; });
     const kept = diffs.filter(d => d.choice !== 'mine').length;
     await finish(applyDiffs(mine, theirs, diffs));
-    toast(kept ? `${kept} ${kept === 1 ? 'change' : 'changes'} applied.` : 'Nothing changed on this phone.');
+    toast(kept ? count(kept, '{n} change applied.', '{n} changes applied.') : t('Nothing changed on this phone.'));
   };
 }
 
@@ -2447,7 +2522,13 @@ async function renderMerge() {
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
-render();
+// the saved language loads before the first screen draws
+Promise.all([getSetting('lang'), getSetting('docLang')]).catch(() => []).then(([l, d] = []) => {
+  uiLang = lang = LANGS[l] ? l : 'en';
+  docLangSet = LANGS[d] ? d : '';
+  document.documentElement.lang = uiLang;
+  render();
+});
 
 </script>
 </body>

@@ -1,5 +1,5 @@
 // Bump the version on every deploy so phones pick up the new files.
-const CACHE = 'medical-info-sheet-v5';
+const CACHE = 'medical-info-sheet-v6';
 const FILES = [
   './',
   'index.html',
