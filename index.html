@@ -26,6 +26,7 @@
   --navy: #101C2B;
   --gold: #E0B45A;
   --gold-deep: #C89A3C;
+  --chart2: #946A14;
   --brand-font: Cinzel, Georgia, serif;
   --bg: #F4F6F8;
   --card: #FFFFFF;
@@ -64,13 +65,14 @@
     --ok: #7FD4A9;
     --ok-soft: #12301F;
     --shadow: none;
+    --chart2: #E0B45A;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0B131D; --card: #132030; --ink: #E9EDF2; --muted: #9FAABA; --line: #243447; --field: #0F1A27;
   --accent: #8DB8E6; --accent-ink: #081A2C; --accent-soft: #17304A; --danger: #FF8A80; --danger-soft: #3A1714;
-  --warn: #F3B562; --warn-soft: #36270F; --ok: #7FD4A9; --ok-soft: #12301F; --shadow: none; color-scheme: dark;
+  --warn: #F3B562; --warn-soft: #36270F; --ok: #7FD4A9; --ok-soft: #12301F; --shadow: none; --chart2: #E0B45A; color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -257,7 +259,7 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 .grid2 { display: grid; gap: 0 12px; grid-template-columns: 1fr; }
 @media (min-width: 560px) { .grid2 { grid-template-columns: 1fr 1fr; } }
 .item-card { margin-top: 14px; padding: 2px 14px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--field); }
-.item-card .item-top { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.item-card .item-top { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
 .item-card .item-top b { font-size: 14px; color: var(--muted); }
 .add-item { margin-top: 14px; }
 .sec-actions { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
@@ -266,6 +268,51 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
 .doc-edit .thumb { width: 96px; aspect-ratio: 3 / 4; border-radius: 8px; background: var(--line) center / cover no-repeat; display: grid; place-items: center; font-weight: 700; color: var(--muted); }
 .doc-edit .field:first-child { margin-top: 0; }
 .saved { font-size: 13px; color: var(--muted); min-width: 56px; text-align: right; }
+
+/* readings logs */
+.log-form { margin-top: 14px; padding: 2px 14px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--field); }
+.modal .log-form { padding: 0; border: 0; background: none; margin-top: 4px; }
+.log-grid { display: grid; gap: 0 10px; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); align-items: end; }
+.log-form .err { color: var(--danger); font-weight: 600; font-size: 14px; margin: 8px 0 0; }
+.log-form .err:empty { display: none; }
+.log-form .row { margin-top: 12px; }
+.modal .log-form .row { justify-content: flex-end; }
+.modal .card { max-height: calc(100vh - 32px); overflow-y: auto; }
+.log-list { margin-top: 12px; max-height: 420px; overflow-y: auto; }
+.log-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.log-row:first-child { border-top: 0; }
+.log-row > div { flex: 1; min-width: 0; }
+.log-row .v { display: block; font-weight: 700; font-size: 17px; }
+.log-row .m { display: block; color: var(--muted); font-size: 13.5px; }
+.lv-hi { color: var(--warn); }
+.lv-hi2 { color: var(--danger); }
+.log-sum { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.log-sum > div { padding: 10px 12px; border-radius: 10px; background: var(--field); border: 1px solid var(--line); }
+.log-sum .lbl { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.log-sum b { display: block; font-size: 24px; line-height: 1.2; margin: 2px 0; }
+.log-sum span:last-child { font-size: 13.5px; color: var(--muted); }
+.chart { display: block; width: 100%; max-width: 560px; height: auto; margin-top: 14px; }
+.chart line.grid { stroke: var(--line); }
+.chart line.ref { stroke: var(--warn); stroke-dasharray: 4 4; opacity: .6; }
+.chart path { fill: none; stroke-width: 2.5; stroke-linejoin: round; }
+.chart .l1 { stroke: var(--accent); } .chart .d1 { fill: var(--accent); }
+.chart .l2 { stroke: var(--chart2); } .chart .d2 { fill: var(--chart2); }
+.chart text { fill: var(--muted); font-size: 11px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+.legend .k1 { background: var(--accent); } .legend .k2 { background: var(--chart2); }
+.flag { font-size: .62em; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: .15em; margin-left: 2px; }
+table.log { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14.5px; }
+table.log th { text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 0 8px 6px 0; }
+table.log td { padding: 7px 8px 7px 0; border-top: 1px solid var(--line); vertical-align: top; }
+table.log td.num { font-weight: 700; white-space: nowrap; }
+table.log .flag { display: block; margin: 0; vertical-align: 0; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.log td:first-child { white-space: nowrap; }
+.more-log summary { cursor: pointer; color: var(--accent); font-weight: 650; padding-top: 10px; }
+.more-log table.log { margin-top: 4px; }
+.due-over { color: var(--danger) !important; font-weight: 700; }
+.due-soon { color: var(--warn) !important; font-weight: 700; }
 
 /* card view */
 .cardview { display: grid; gap: 16px; justify-items: center; }
@@ -338,7 +385,8 @@ h1, h2, h3 { line-height: 1.2; margin: 0; }
   .psheet .card { box-shadow: none; border: .3mm solid #ccc; break-inside: avoid; }
   .psheet .alertbox, .psheet .alert-pill, .psheet .blood { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .psheet .patient h2 { font-size: 18pt; }
-  .psheet .docs, .psheet .locked .btn { display: none; }
+  .psheet .docs, .psheet .locked .btn, .psheet .more-log { display: none; }
+  .psheet .chart { max-width: 120mm; }
 }
 
 /* share tabs, pager, scanner, merge */
@@ -386,6 +434,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const goodId = id => typeof id === 'string' && /^[a-z0-9]{4,40}$/i.test(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const STALE_DAYS = 180;
@@ -468,8 +517,7 @@ async function installApp() {
     return;
   }
   const m = modal(`<h2>Install on iPhone</h2>
-    <p>Safari is the only iPhone browser that installs apps.</p>
-    <p>1. Tap the Share button at the bottom of Safari.</p>
+    <p>1. Tap the Share button. Safari has it at the bottom and Chrome at the top right.</p>
     <p>2. Tap Add to Home Screen, then Add.</p>
     <div class="row"><button class="btn primary" data-x>OK</button></div>`);
   $('[data-x]', m).onclick = () => m.remove();
@@ -575,6 +623,28 @@ const SECTIONS = [
     ],
   },
   {
+    key: 'bp', title: 'Blood pressure log', itemName: 'reading', log: true, wide: true,
+    intro: 'Sit for 5 minutes before measuring and log every reading, since the doctor reads the trend and not a single number.',
+    items: [
+      { k: 'when', label: 'Time', type: 'datetime' },
+      { k: 'sys', label: 'Top number', type: 'number' },
+      { k: 'dia', label: 'Bottom number', type: 'number' },
+      { k: 'pulse', label: 'Pulse', type: 'number' },
+      { k: 'note', label: 'Note', hint: 'Example: before the morning losartan, or felt dizzy' },
+    ],
+  },
+  {
+    key: 'sugar', title: 'Blood sugar log', itemName: 'reading', log: true, wide: true,
+    intro: 'Choose when the reading was taken, since fasting and after-meal targets are different.',
+    items: [
+      { k: 'when', label: 'Time', type: 'datetime' },
+      { k: 'value', label: 'Reading', type: 'number' },
+      { k: 'unit', label: 'Unit', type: 'select', options: ['mg/dL', 'mmol/L'] },
+      { k: 'timing', label: 'Taken', type: 'select', blank: true, options: ['Fasting', 'Before a meal', '2 hours after a meal', 'Bedtime', 'Random'] },
+      { k: 'note', label: 'Note', hint: 'Example: shaky and sweaty, ate candy after' },
+    ],
+  },
+  {
     key: 'women', title: 'Pregnancy and menstruation', female: true,
     fields: [
       { k: 'lmp', label: 'Last menstrual period', type: 'date' },
@@ -584,15 +654,16 @@ const SECTIONS = [
     ],
   },
   {
-    key: 'vaccines', title: 'Vaccines',
-    intro: 'Write the year of the last dose.',
-    fields: [
-      { k: 'tetanus', label: 'Tetanus', hint: 'Example: 2022' },
-      { k: 'flu', label: 'Flu', hint: 'Example: 2026' },
-      { k: 'pneumonia', label: 'Pneumonia', hint: 'Example: 2024, PCV20' },
-      { k: 'hepb', label: 'Hepatitis B', hint: 'Example: complete, 3 doses' },
-      { k: 'covid', label: 'COVID-19', hint: 'Example: 2023 booster' },
-      { k: 'other', label: 'Other vaccines', hint: 'Example: rabies, 2025' },
+    key: 'vaccines', title: 'Vaccines', itemName: 'vaccine shot', itemLabel: 'Shot', wide: true,
+    intro: 'Add one entry per shot, since each dose has its own date and lot number. Press Add next shot on a vaccine to log its next dose or booster.',
+    items: [
+      { k: 'name', label: 'Vaccine', list: 'vaccine-names', hint: 'Example: Tetanus-diphtheria (Td)' },
+      { k: 'dose', label: 'Dose', type: 'select', options: ['1st dose', '2nd dose', '3rd dose', '4th dose', 'Booster', 'Yearly shot', 'Single dose'] },
+      { k: 'date', label: 'Date given', type: 'date' },
+      { k: 'lot', label: 'Lot number', hint: 'Printed on the vaccine card or the sticker from the vial. Example: EK5730' },
+      { k: 'where', label: 'Given at', hint: 'Example: Naga City Health Office' },
+      { k: 'next', label: 'Next shot due', type: 'date', hint: 'Copy it from the vaccine card. Leave it blank when the series is complete.' },
+      { k: 'notes', label: 'Notes', hint: 'Example: fever for a day after the shot' },
     ],
   },
   {
@@ -662,6 +733,10 @@ const SECTIONS = [
   },
 ];
 const SEC = Object.fromEntries(SECTIONS.map(s => [s.key, s]));
+const VACCINE_NAMES = ['BCG', 'Hepatitis B', 'Hepatitis A', 'Pentavalent (DTwP-HepB-Hib)', '6-in-1 (DTaP-IPV-Hib-HepB)', 'Oral polio (OPV)', 'Inactivated polio (IPV)',
+  'Pneumococcal (PCV13)', 'Pneumococcal (PCV15)', 'Pneumococcal (PCV20)', 'Pneumococcal (PPSV23)', 'Measles, mumps, rubella (MMR)', 'Measles, rubella (MR)', 'Varicella (chickenpox)',
+  'Rotavirus', 'Influenza (flu)', 'Tetanus toxoid (TT)', 'Tetanus-diphtheria (Td)', 'Tdap', 'HPV', 'Japanese encephalitis', 'Typhoid', 'Dengue', 'Rabies, before exposure',
+  'Rabies, after a bite', 'Shingles (RZV)', 'RSV', 'Meningococcal', 'COVID-19'];
 const DOC_KINDS = ['ECG', 'Lab results', 'Discharge summary', 'Imaging report', 'Prescription', 'Other'];
 
 /* ---------- storage ---------- */
@@ -711,7 +786,17 @@ function newPerson() {
   for (const s of SECTIONS) p.data[s.key] = s.docs ? { items: [] } : (s.items ? { items: [] } : {});
   return p;
 }
+const OLD_VACCINES = { tetanus: 'Tetanus', flu: 'Influenza (flu)', pneumonia: 'Pneumococcal', hepb: 'Hepatitis B', covid: 'COVID-19', other: 'Other vaccines' };
 function sec(p, key) {
+  // versions before October 2026 kept vaccines as one text box per vaccine
+  const v = key === 'vaccines' && p.data.vaccines;
+  if (v && (!Array.isArray(v.items) || Object.keys(OLD_VACCINES).some(k => k in v))) {
+    const items = Array.isArray(v.items) ? v.items : [];
+    for (const k of Object.keys(OLD_VACCINES)) {
+      if (filled(v[k]) && !items.some(i => i.name === OLD_VACCINES[k] && i.notes === String(v[k]))) items.push({ name: OLD_VACCINES[k], notes: String(v[k]) });
+    }
+    p.data.vaccines = { items };
+  }
   if (!p.data[key]) p.data[key] = SEC[key].items || SEC[key].docs ? { items: [] } : {};
   if ((SEC[key].items || SEC[key].docs) && !Array.isArray(p.data[key].items)) p.data[key].items = [];
   return p.data[key];
@@ -851,6 +936,7 @@ async function render() {
   const parts = h.split('/');
   releaseWake();
   stopTimers();
+  $$('.modal').forEach(m => m.remove());
   if (current) await flushSave(current);
   window.scrollTo(0, 0);
   if (parts[0] === 'p' && parts[1]) {
@@ -881,6 +967,8 @@ async function renderHome() {
     if (b.blood) chips.push(`<span class="chip">${esc(b.blood)}</span>`);
     const allergies = al.items.filter(i => i.what).map(i => i.what);
     if (allergies.length) chips.push(`<span class="chip red">Allergic: ${esc(allergies.join(', '))}</span>`);
+    const due = vaccineGroups(p).filter(g => g.due);
+    if (due.length) chips.push(`<span class="chip ${due.some(g => g.due === 'over') ? 'red' : 'amber'}">${due.length === 1 ? esc(due[0].name) + (due[0].due === 'over' ? ' overdue' : ' due soon') : due.length + ' vaccines due'}</span>`);
     const stale = staleSections(p).length;
     if (stale) chips.push(`<span class="chip amber">${stale} ${stale === 1 ? 'section' : 'sections'} older than 6 months</span>`);
     const meta = [age(b.dob), b.sex].filter(Boolean).join(', ');
@@ -914,7 +1002,7 @@ async function addPerson() {
   location.hash = `#/p/${p.id}/edit`;
 }
 function staleSections(p) {
-  return SECTIONS.filter(s => (!s.female || isFemale(p)) && hasContent(p, s.key) && isStale(p.updated?.[s.key]));
+  return SECTIONS.filter(s => !s.log && (!s.female || isFemale(p)) && hasContent(p, s.key) && isStale(p.updated?.[s.key]));
 }
 
 /* ---------- content checks ---------- */
@@ -926,6 +1014,234 @@ function hasContent(p, key) {
   if (d.none) return true;
   if (s.items && d.items.some(i => itemFilled(i, s.items))) return true;
   return (s.fields || []).some(f => (!f.female || isFemale(p)) && filled(d[f.k]));
+}
+
+/* ---------- readings logs and vaccines ---------- */
+const DAY = 86400000;
+const whenMs = r => new Date(r.when).getTime();
+function readings(p, key) {
+  const ok = key === 'bp' ? r => r.when && filled(r.sys) && filled(r.dia) : r => r.when && filled(r.value);
+  return sec(p, key).items.filter(ok).sort((a, b) => a.when.localeCompare(b.when));
+}
+const mgdl = r => +r.value * (r.unit === 'mmol/L' ? 18 : 1);
+function fmtWhen(iso, absolute) { return fmtDose(iso, absolute); }
+function bpLevel(r) {
+  const a = +r.sys, b = +r.dia;
+  if (a >= 180 || b >= 120 || a < 90) return 'lv-hi2';
+  if (a >= 140 || b >= 90) return 'lv-hi';
+  return '';
+}
+// limits in each unit: low, very high, fasting or before a meal, other times
+const SUGAR_LIMITS = { 'mg/dL': [70, 300, 130, 180], 'mmol/L': [3.9, 16.7, 7.2, 10] };
+function sugarLevel(r) {
+  const [lo, top, fast, other] = SUGAR_LIMITS[r.unit] || SUGAR_LIMITS['mg/dL'], v = +r.value;
+  if (v < lo || v >= top) return 'lv-hi2';
+  if (v > (r.timing === 'Fasting' || r.timing === 'Before a meal' ? fast : other)) return 'lv-hi';
+  return '';
+}
+function levelWord(key, r) {
+  const lv = key === 'bp' ? bpLevel(r) : sugarLevel(r);
+  if (!lv) return '';
+  const low = key === 'bp' ? +r.sys < 90 : +r.value < (SUGAR_LIMITS[r.unit] || SUGAR_LIMITS['mg/dL'])[0];
+  return low ? 'Low' : lv === 'lv-hi2' ? 'Very high' : 'High';
+}
+const flagHtml = (key, r) => { const w = levelWord(key, r); return w ? ` <span class="flag">${w}</span>` : ''; };
+function bpText(r) { return `${r.sys}/${r.dia}`; }
+function sugarText(r, unit) {
+  const u = unit || r.unit || 'mg/dL';
+  const v = u === (r.unit || 'mg/dL') ? +r.value : (u === 'mmol/L' ? mgdl(r) / 18 : mgdl(r));
+  return `${u === 'mmol/L' ? v.toFixed(1) : Math.round(v)} ${u}`;
+}
+function readingLine(key, r, absolute) {
+  const w = levelWord(key, r) ? `(${levelWord(key, r).toLowerCase()})` : '';
+  if (key === 'bp') return [fmtWhen(r.when, absolute) + ':', bpText(r), w, r.pulse ? `pulse ${r.pulse}` : '', r.note ? `(${r.note})` : ''].filter(Boolean).join(' ');
+  return [fmtWhen(r.when, absolute) + ':', sugarText(r), w, r.timing ? r.timing.toLowerCase() : '', r.note ? `(${r.note})` : ''].filter(Boolean).join(' ');
+}
+const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+function lastDays(list, days) { const from = Date.now() - days * DAY; return list.filter(r => whenMs(r) >= from); }
+function bpAverage(list) {
+  if (!list.length) return null;
+  const pulses = list.filter(r => filled(r.pulse)).map(r => +r.pulse);
+  return { text: `${Math.round(avg(list.map(r => +r.sys)))}/${Math.round(avg(list.map(r => +r.dia)))}`, pulse: pulses.length ? Math.round(avg(pulses)) : 0, n: list.length };
+}
+function sugarAverage(list, unit) {
+  if (!list.length) return null;
+  const v = avg(list.map(mgdl));
+  return { text: unit === 'mmol/L' ? `${(v / 18).toFixed(1)} mmol/L` : `${Math.round(v)} mg/dL`, n: list.length };
+}
+const FASTING = r => r.timing === 'Fasting';
+const AFTER_MEAL = r => r.timing === '2 hours after a meal';
+
+// trend chart of the last 30 days, sized for a phone so the labels stay readable
+function chartSvg(list, series, refs, step = 10) {
+  const pts = lastDays(list, 30);
+  if (pts.length < 2) return '';
+  const W = 360, H = 170, L = 34, R = 10, T = 10, B = 24;
+  const t0 = whenMs(pts[0]), t1 = Math.max(whenMs(pts[pts.length - 1]), t0 + DAY);
+  const vals = pts.flatMap(r => series.map(sr => sr.get(r))).concat(refs);
+  const lo = Math.floor((Math.min(...vals) - step) / step) * step, hi = Math.ceil((Math.max(...vals) + step) / step) * step;
+  const x = t => L + (t - t0) / (t1 - t0) * (W - L - R);
+  const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  let g = `<line class="grid" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>`;
+  for (const v of refs) g += `<line class="ref" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L - 4}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${v}</text>`;
+  series.forEach((sr, i) => {
+    const d = pts.map((r, j) => `${j ? 'L' : 'M'}${x(whenMs(r)).toFixed(1)} ${y(sr.get(r)).toFixed(1)}`).join('');
+    g += `<path class="l${i + 1}" d="${d}"/>` + pts.map(r => `<circle class="d${i + 1}" cx="${x(whenMs(r)).toFixed(1)}" cy="${y(sr.get(r)).toFixed(1)}" r="3"/>`).join('');
+  });
+  const d0 = new Date(t0), d1 = new Date(whenMs(pts[pts.length - 1]));
+  g += `<text x="${L}" y="${H - 6}">${d0.getDate()} ${MONTHS[d0.getMonth()]}</text><text x="${W - R}" y="${H - 6}" text-anchor="end">${d1.getDate()} ${MONTHS[d1.getMonth()]}</text>`;
+  const legend = series.length > 1 ? `<div class="legend">${series.map((sr, i) => `<span><i class="k${i + 1}"></i>${esc(sr.label)}</span>`).join('')}</div>` : '';
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Readings over the last 30 days">${g}</svg>${legend}`;
+}
+function logTable(key, list, opts) {
+  const desc = [...list].reverse();
+  const row = r => key === 'bp'
+    ? `<tr><td>${esc(fmtWhen(r.when, opts.print))}</td><td class="num ${bpLevel(r)}">${esc(bpText(r))}${flagHtml('bp', r)}</td><td>${esc(r.pulse || '')}</td><td>${esc(r.note || '')}</td></tr>`
+    : `<tr><td>${esc(fmtWhen(r.when, opts.print))}</td><td class="num ${sugarLevel(r)}">${esc(sugarText(r))}${flagHtml('sugar', r)}</td><td>${esc(r.timing || '')}</td><td>${esc(r.note || '')}</td></tr>`;
+  const head = key === 'bp' ? '<tr><th>Time</th><th>BP</th><th>Pulse</th><th>Note</th></tr>' : '<tr><th>Time</th><th>Sugar</th><th>Taken</th><th>Note</th></tr>';
+  const shown = opts.print ? lastDays(desc, 90) : desc.slice(0, 10);
+  const rest = opts.print ? [] : desc.slice(10);
+  return `<div class="table-scroll"><table class="log"><thead>${head}</thead><tbody>${shown.map(row).join('')}</tbody></table></div>`
+    + (rest.length ? `<details class="more-log"><summary>${rest.length} older ${rest.length === 1 ? 'reading' : 'readings'}</summary><div class="table-scroll"><table class="log"><tbody>${rest.map(row).join('')}</tbody></table></div></details>` : '');
+}
+function bpBody(p, opts) {
+  const list = readings(p, 'bp');
+  if (!list.length) return '';
+  const last = list[list.length - 1], wk = bpAverage(lastDays(list, 7));
+  return `<div class="log-sum">
+      <div><span class="lbl">Latest</span><b class="${bpLevel(last)}">${esc(bpText(last))}${flagHtml('bp', last)}</b><span>${esc([last.pulse ? 'pulse ' + last.pulse : '', fmtWhen(last.when, opts.print)].filter(Boolean).join(', '))}</span></div>
+      ${wk ? `<div><span class="lbl">7-day average</span><b>${esc(wk.text)}</b><span>${wk.pulse ? `pulse ${wk.pulse}, ` : ''}${wk.n} ${wk.n === 1 ? 'reading' : 'readings'}</span></div>` : ''}
+    </div>
+    ${chartSvg(list, [{ label: 'Top number', get: r => +r.sys }, { label: 'Bottom number', get: r => +r.dia }], [140, 90])}
+    ${logTable('bp', list, opts)}
+    <p class="muted small" style="margin:8px 0 0">High is 140/90 or higher. Red is 180/120 or higher, or a top number under 90.</p>`;
+}
+function sugarBody(p, opts) {
+  const list = readings(p, 'sugar');
+  if (!list.length) return '';
+  const last = list[list.length - 1], unit = last.unit || 'mg/dL';
+  const wk = lastDays(list, 7);
+  const fa = sugarAverage(wk.filter(FASTING), unit), am = sugarAverage(wk.filter(AFTER_MEAL), unit);
+  const toUnit = v => unit === 'mmol/L' ? v / 18 : v;
+  return `<div class="log-sum">
+      <div><span class="lbl">Latest</span><b class="${sugarLevel(last)}">${esc(sugarText(last))}${flagHtml('sugar', last)}</b><span>${esc([last.timing, fmtWhen(last.when, opts.print)].filter(Boolean).join(', '))}</span></div>
+      ${fa ? `<div><span class="lbl">7-day fasting average</span><b>${esc(fa.text)}</b><span>${fa.n} ${fa.n === 1 ? 'reading' : 'readings'}</span></div>` : ''}
+      ${am ? `<div><span class="lbl">7-day after-meal average</span><b>${esc(am.text)}</b><span>${am.n} ${am.n === 1 ? 'reading' : 'readings'}</span></div>` : ''}
+    </div>
+    ${chartSvg(list, [{ label: 'Reading', get: r => Math.round(toUnit(mgdl(r)) * 10) / 10 }], unit === 'mmol/L' ? [3.9, 10] : [70, 180], unit === 'mmol/L' ? 1 : 10)}
+    ${logTable('sugar', list, opts)}
+    <p class="muted small" style="margin:8px 0 0">${unit === 'mmol/L'
+      ? 'High is above 7.2 fasting or before a meal, and above 10 at other times. Red is under 3.9, or 16.7 and higher.'
+      : 'High is above 130 fasting or before a meal, and above 180 at other times. Red is under 70, or 300 and higher.'}</p>`;
+}
+
+function vaccineGroups(p) {
+  const items = sec(p, 'vaccines').items.filter(i => itemFilled(i, SEC.vaccines.items));
+  const map = new Map();
+  for (const it of items) {
+    const name = (it.name || '').trim() || 'Vaccine not named';
+    const k = name.toLowerCase();
+    if (!map.has(k)) map.set(k, { name, shots: [] });
+    map.get(k).shots.push(it);
+  }
+  const today = dayOf(Date.now()), soon = dayOf(Date.now() + 30 * DAY);
+  return [...map.values()].map(g => {
+    // a shot without a date was most likely just added, so it counts as the latest; text carried over from the old vaccine boxes stays first
+    const order = sh => sh.date || (sh.dose || sh.lot || sh.next ? '9999' : '0000');
+    g.shots.sort((a, b) => order(a).localeCompare(order(b)));
+    g.next = g.shots[g.shots.length - 1].next || '';
+    g.due = !g.next ? '' : g.next < today ? 'over' : g.next <= soon ? 'soon' : '';
+    return g;
+  });
+}
+function shotLine(sh) {
+  const head = [sh.dose, sh.date ? fmtDate(sh.date) : (sh.dose ? 'date not written' : ''), sh.lot ? 'lot ' + sh.lot : '', sh.where].filter(Boolean).join(', ');
+  return [head, sh.notes].filter(Boolean).join('. ');
+}
+function nextLine(g) {
+  if (!g.next) return '';
+  return g.due === 'over' ? `Overdue. The next shot was due ${fmtDate(g.next)}` : `Next shot due ${fmtDate(g.next)}`;
+}
+function vaccinesBody(p) {
+  return `<ul class="items">${vaccineGroups(p).map(g => `<li><div class="main">${esc(g.name)}</div>
+    ${g.shots.map(sh => `<div class="sub">${esc(shotLine(sh))}</div>`).join('')}
+    ${g.next ? `<div class="sub ${g.due ? 'due-' + g.due : ''}">${esc(nextLine(g))}</div>` : ''}</li>`).join('')}</ul>`;
+}
+
+/* ---------- adding readings ---------- */
+function logInput(f, v) {
+  let input;
+  if (f.type === 'select') input = `<select data-log="${f.k}">${f.blank ? '<option value=""></option>' : ''}${f.options.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  else if (f.type === 'number') input = `<input type="number" inputmode="decimal" step="any" data-log="${f.k}">`;
+  else if (f.type === 'datetime') input = `<input type="datetime-local" data-log="${f.k}" value="${localNow()}">`;
+  else input = `<input type="text" data-log="${f.k}" autocomplete="off">`;
+  return `<label class="field"><span>${esc(f.label)}</span>${input}${f.hint && f.type === 'number' ? `<span class="hint">${esc(f.hint)}</span>` : ''}</label>`;
+}
+function logFormHtml(p, s, inModal) {
+  const lastUnit = s.key === 'sugar' ? (readings(p, 'sugar').slice(-1)[0]?.unit || 'mg/dL') : '';
+  const nums = s.items.filter(f => f.k !== 'when' && f.k !== 'note');
+  const note = s.items.find(f => f.k === 'note');
+  return `<div class="log-form" data-log-form="${s.key}">
+    ${logInput(s.items[0])}
+    <div class="log-grid">${nums.map(f => logInput(f, f.k === 'unit' ? lastUnit : '')).join('')}</div>
+    <label class="field"><span>${esc(note.label)}</span><input type="text" data-log="note" autocomplete="off"><span class="hint">${esc(note.hint)}</span></label>
+    <p class="err" role="alert"></p>
+    <div class="row">${inModal ? '<button type="button" class="btn" data-x>Cancel</button>' : ''}<button type="button" class="btn primary" data-log-add="${s.key}">${ICON.plus}Add reading</button></div></div>`;
+}
+function logListHtml(p, s) {
+  const list = [...readings(p, s.key)].reverse();
+  if (!list.length) return '<p class="muted small" style="margin:12px 0 0">No readings yet.</p>';
+  return `<div class="log-list">${list.map(r => `<div class="log-row"><div><span class="v ${s.key === 'bp' ? bpLevel(r) : sugarLevel(r)}">${esc(s.key === 'bp' ? bpText(r) : sugarText(r))}${flagHtml(s.key, r)}</span>
+    <span class="m">${esc([s.key === 'bp' && r.pulse ? 'pulse ' + r.pulse : r.timing, fmtWhen(r.when), r.note].filter(Boolean).join(' · '))}</span></div>
+    <button type="button" class="btn sm ghost danger" data-log-del="${esc(r.id)}">Remove</button></div>`).join('')}</div>`;
+}
+// returns an error message, or '' once the reading is saved
+function addReading(p, key, form) {
+  const v = k => ($(`[data-log="${k}"]`, form)?.value || '').trim();
+  const when = v('when');
+  if (!when) return 'Choose the time of the reading.';
+  let r;
+  if (key === 'bp') {
+    const sys = +v('sys'), dia = +v('dia'), pulse = v('pulse');
+    if (!v('sys') || !v('dia')) return 'Write both the top and the bottom number.';
+    if (sys <= dia) return `The top number is always higher than the bottom one. Check ${sys}/${dia}.`;
+    if (sys < 50 || sys > 300 || dia < 20 || dia > 200) return `Check ${sys}/${dia} on the machine.`;
+    r = { sys: String(sys), dia: String(dia), pulse };
+  } else {
+    const unit = v('unit') || 'mg/dL', val = +v('value');
+    if (!v('value')) return 'Write the reading from the meter.';
+    const okRange = unit === 'mmol/L' ? val >= 0.5 && val <= 55 : val >= 10 && val <= 1000;
+    if (!okRange) return unit === 'mmol/L' && val > 55 ? `${val} looks like mg/dL. Change the unit to mg/dL.` : `Check ${val} ${unit}.`;
+    r = { value: String(val), unit, timing: v('timing') };
+  }
+  const d = sec(p, key);
+  d.items.push({ id: uid(), when, ...r, note: v('note') });
+  d.items.sort((a, b) => (a.when || '').localeCompare(b.when || ''));
+  touch(p, key);
+  return '';
+}
+function resetLogForm(form) {
+  $$('[data-log]', form).forEach(el => {
+    if (el.dataset.log === 'when') el.value = localNow();
+    else if (el.tagName !== 'SELECT') el.value = '';
+  });
+  $('.err', form).textContent = '';
+}
+async function logFromView(p, key) {
+  if (!(await requireUnlock())) return;
+  const s = SEC[key];
+  const m = modal(`<h2>${esc(s.title)}</h2><p>${esc(displayName(p))}</p>${logFormHtml(p, s, true)}`);
+  const form = $('[data-log-form]', m);
+  $('[data-x]', m).onclick = () => m.remove();
+  $('[data-log-add]', m).onclick = async () => {
+    const err = addReading(p, key, form);
+    if (err) { $('.err', form).textContent = err; return; }
+    p.savedAt = Date.now();
+    await DB.put('people', p);
+    m.remove();
+    renderView(p);
+  };
+  setTimeout(() => $('[data-log="sys"], [data-log="value"]', m)?.focus(), 50);
 }
 
 /* ---------- doctor view ---------- */
@@ -981,6 +1297,9 @@ function sectionBody(p, key, opts = {}) {
       return `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.relation ? ` <span class="muted" style="font-weight:500">${esc(c.relation)}</span>` : ''}</div><div class="sub">${telLink(c.phone)}${c.consent ? ` &middot; <b>Can sign consent</b>` : ''}</div></li>`).join('')}</ul>`;
     case 'doctors':
       return `<ul class="items">${list.map(c => `<li><div class="main">${esc(c.name)}${c.specialty ? ` <span class="muted" style="font-weight:500">${esc(c.specialty)}</span>` : ''}</div><div class="sub">${[telLink(c.phone), esc(c.clinic)].filter(Boolean).join(' &middot; ')}</div></li>`).join('')}</ul>`;
+    case 'bp': return bpBody(p, opts);
+    case 'sugar': return sugarBody(p, opts);
+    case 'vaccines': return vaccinesBody(p);
     case 'aids': {
       const have = s.fields.filter(f => f.type === 'check' && d[f.k]).map(f => f.label);
       const rest = kvList(p, s, d, ['hearing', 'glasses', 'dentures']);
@@ -1011,7 +1330,7 @@ async function docsBody(p) {
 async function viewHtml(p, opts = {}) {
   const b = sec(p, 'basics');
   const photo = opts.print ? '' : await fileUrl(b.photo);
-  const facts = [age(b.dob), b.sex, b.dob ? 'born ' + fmtDate(b.dob) : '', b.weight ? b.weight + ' kg' : '', b.height ? b.height + ' cm' : ''].filter(Boolean).join(' &middot; ');
+  const facts = [age(b.dob), b.sex, b.dob ? 'born ' + fmtDate(b.dob) : '', b.weight ? b.weight + ' kg' : '', b.height ? b.height + ' cm' : ''].filter(Boolean).map(esc).join(' &middot; ');
   const al = sec(p, 'allergies');
   const allergies = al.items.filter(i => i.what);
   const alerts = sec(p, 'alerts');
@@ -1043,7 +1362,7 @@ async function viewHtml(p, opts = {}) {
     ${pills.length ? `<div class="alerts-list">${pills.map(x => `<span class="alert-pill">${esc(x)}</span>`).join('')}</div>` : ''}${alertLines.join('')}</div>` : '';
 
   const unlocked = await isUnlocked();
-  const order = ['meds', 'conditions', 'surgeries', 'baseline', 'women', 'contacts', 'vaccines', 'history', 'aids', 'doctors', 'care', 'ids', 'docs'];
+  const order = ['meds', 'conditions', 'surgeries', 'baseline', 'bp', 'sugar', 'women', 'contacts', 'vaccines', 'history', 'aids', 'doctors', 'care', 'ids', 'docs'];
   const cards = [];
   for (const key of order) {
     const s = SEC[key];
@@ -1080,7 +1399,10 @@ async function renderView(p) {
     <header class="bar"><a class="btn icon ghost" href="#/" aria-label="Back">${ICON.back}</a><h1>Summary</h1>
       <a class="btn sm" href="#/p/${p.id}/share">${ICON.card}Share</a>
       <a class="btn sm" href="#/p/${p.id}/edit">${ICON.edit}Edit</a></header>
-    <main class="wrap">${await viewHtml(p)}</main>`;
+    <main class="wrap">${await viewHtml(p)}
+      <div class="viewfoot"><button class="btn" data-log-view="bp">${ICON.plus}Log blood pressure</button><button class="btn" data-log-view="sugar">${ICON.plus}Log blood sugar</button></div>
+    </main>`;
+  $$('[data-log-view]').forEach(b => b.onclick = () => logFromView(p, b.dataset.logView));
   $$('[data-unlock]').forEach(b => b.onclick = async () => { if (await requireUnlock()) renderView(p); });
   $$('[data-doc]').forEach(b => b.onclick = () => {
     const doc = sec(p, 'docs').items[+b.dataset.doc];
@@ -1118,8 +1440,9 @@ function touch(p, key) {
   p.updated[key] = Date.now();
 }
 
+let fieldSeq = 0;
 function fieldHtml(f, v, name) {
-  const id = 'f_' + name.replace(/[^a-z0-9]/gi, '_');
+  const id = 'f' + (++fieldSeq);
   if (f.type === 'check') {
     return `<label class="check"><input type="checkbox" data-f="${esc(name)}" ${v ? 'checked' : ''}>${esc(f.label)}</label>`;
   }
@@ -1133,7 +1456,7 @@ function fieldHtml(f, v, name) {
   } else {
     const t = { date: 'date', number: 'number', tel: 'tel' }[f.type] || 'text';
     const extra = f.type === 'number' ? ' inputmode="decimal" step="any"' : '';
-    input = `<input id="${id}" type="${t}" data-f="${esc(name)}" value="${esc(v)}"${extra} autocomplete="off">`;
+    input = `<input id="${id}" type="${t}" data-f="${esc(name)}" value="${esc(v)}"${extra}${f.list ? ` list="${f.list}"` : ''} autocomplete="off">`;
   }
   return `<label class="field" for="${id}"><span>${esc(f.label)}</span>${input}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ''}</label>`;
 }
@@ -1146,6 +1469,13 @@ function editSectionHtml(p, s) {
       <label class="btn sm">Add photo<input type="file" accept="image/*" data-photo hidden></label>
       ${d.photo ? '<button type="button" class="btn sm ghost" data-photo-remove>Remove photo</button>' : ''}</div>
       <p class="hint muted small" style="margin:6px 0 0">A face photo helps staff match the page to the patient.</p>`;
+  }
+  if (s.log) {
+    body += logFormHtml(p, s) + `<div data-log-list>${logListHtml(p, s)}</div>`;
+    const n = readings(p, s.key).length;
+    return `<details class="card edit-sec" data-sec="${s.key}">
+      <summary><h3>${esc(s.title)}</h3>${n ? `<span class="chip">${n} ${n === 1 ? 'reading' : 'readings'}</span>` : ''}${ICON.chev}</summary>
+      <div class="edit-body">${body}</div></details>`;
   }
   if (s.none) {
     body += `<label class="check"><input type="checkbox" data-none ${d.none ? 'checked' : ''}>${esc(s.none)}</label>`;
@@ -1172,7 +1502,9 @@ function editSectionHtml(p, s) {
     <div class="edit-body">${body}</div></details>`;
 }
 function itemHtml(s, it, i) {
-  return `<div class="item-card" data-item="${i}"><div class="item-top"><b>${esc(s.itemName[0].toUpperCase() + s.itemName.slice(1))} ${i + 1}</b>
+  const label = s.itemLabel || s.itemName[0].toUpperCase() + s.itemName.slice(1);
+  return `<div class="item-card" data-item="${i}"><div class="item-top"><b>${esc(label)} ${i + 1}</b>
+    <span class="spacer"></span>${s.key === 'vaccines' ? `<button type="button" class="btn sm" data-booster="${i}">${ICON.plus}Add next shot</button>` : ''}
     <button type="button" class="btn sm ghost danger" data-remove-item="${i}">Remove</button></div>
     <div class="grid2">${s.items.map(f => fieldHtml(f, it[f.k], `${i}.${f.k}`)).join('')}</div></div>`;
 }
@@ -1202,6 +1534,7 @@ async function renderEdit(p) {
     <main class="wrap" data-editor>
       <p class="muted" style="margin:0">Fill in what you know now and come back for the rest. Changes save as you type.</p>
       ${SECTIONS.filter(s => !s.female || isFemale(p)).map(s => editSectionHtml(p, s)).join('')}
+      <datalist id="vaccine-names">${VACCINE_NAMES.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
       <div class="row" style="margin-top:24px"><button class="btn danger" data-delete>Delete ${esc(displayName(p))}</button></div>
     </main>`;
   const root = $('[data-editor]');
@@ -1258,6 +1591,38 @@ async function onEditClick(p, e) {
     return;
   }
   if (!s) return;
+  if (t.dataset.logAdd) {
+    const form = t.closest('[data-log-form]');
+    const err = addReading(p, key, form);
+    $('.err', form).textContent = err;
+    if (err) return;
+    scheduleSave(p);
+    resetLogForm(form);
+    $('[data-log-list]', secEl).innerHTML = logListHtml(p, s);
+    const n = readings(p, key).length, sum = $('summary', secEl);
+    $('.chip', sum)?.remove();
+    sum.querySelector('h3').insertAdjacentHTML('afterend', `<span class="chip">${n} ${n === 1 ? 'reading' : 'readings'}</span>`);
+    return;
+  }
+  if (t.dataset.logDel) {
+    if (!(await confirmBox('Remove this reading?', '', 'Remove', true))) return;
+    d.items = d.items.filter(r => r.id !== t.dataset.logDel);
+    touch(p, key); scheduleSave(p);
+    $('[data-log-list]', secEl).innerHTML = logListHtml(p, s);
+    return;
+  }
+  if (t.dataset.booster !== undefined) {
+    const from = d.items[+t.dataset.booster] || {};
+    const NEXT_DOSE = { '1st dose': '2nd dose', '2nd dose': '3rd dose', '3rd dose': '4th dose', 'Yearly shot': 'Yearly shot' };
+    d.items.push({ name: from.name || '', dose: NEXT_DOSE[from.dose] || 'Booster' });
+    const i = d.items.length - 1;
+    $('[data-items]', secEl).insertAdjacentHTML('beforeend', itemHtml(s, d.items[i], i));
+    touch(p, key); scheduleSave(p);
+    const card = $(`[data-item="${i}"]`, secEl);
+    card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    $(`[data-f="${i}.date"]`, card)?.focus({ preventScroll: true });
+    return;
+  }
   if (t.dataset.now !== undefined) {
     const [i, k] = t.dataset.now.split('.');
     d.items[+i][k] = localNow();
@@ -1366,6 +1731,8 @@ function summaryText(p, budget) {
   const bl = sec(p, 'baseline');
   const usual = [bl.bp ? 'BP ' + bl.bp : '', bl.sugar ? 'sugar ' + bl.sugar : '', bl.creatinine ? 'creatinine ' + bl.creatinine : '', bl.mental, bl.mobility].filter(Boolean);
   if (usual.length) groups.push('USUAL: ' + usual.join('; '));
+  const bpw = bpAverage(lastDays(readings(p, 'bp'), 7));
+  if (bpw) groups.push(`BP 7-DAY AVERAGE: ${bpw.text} (${bpw.n})`);
   if (a.codeStatus && !a.codeStatus.startsWith('Do not')) groups.push('CODE STATUS: ' + a.codeStatus);
   if (a.decider) groups.push('DECIDES: ' + a.decider);
   for (const c of contacts.slice(1)) groups.push('CONTACT: ' + [c.name, c.relation ? `(${c.relation}${c.consent ? ', can consent' : ''})` : '', c.phone].filter(Boolean).join(' '));
@@ -1583,7 +1950,7 @@ async function importFile(file) {
   if (data?.app !== 'medical-info-sheet' || !Array.isArray(data.people)) { toast(`${file.name} is not a Medical Info Sheet export.`); return; }
   let added = 0, updated = 0, kept = 0;
   for (const p of data.people) {
-    if (!p || !p.id || !p.data) continue;
+    if (!p || !goodId(p.id) || !p.data) continue;
     const mine = await DB.get('people', p.id);
     if (mine && (mine.savedAt || 0) >= (p.savedAt || 0)) { kept++; continue; }
     const ids = [p.data.basics?.photo, ...(p.data.docs?.items || []).map(d => d.file)].filter(Boolean);
@@ -1661,15 +2028,28 @@ function doctorBlocks(p) {
   ]);
   if (blLines.length) blocks.push('USUAL CONDITION\n' + blLines.join('\n'));
 
+  const bpl = readings(p, 'bp'), bpw = bpAverage(lastDays(bpl, 7));
+  if (bpl.length) blocks.push(lines(['BLOOD PRESSURE LOG',
+    bpw ? `Average of the last 7 days: ${bpw.text}${bpw.pulse ? ', pulse ' + bpw.pulse : ''} (${bpw.n} ${bpw.n === 1 ? 'reading' : 'readings'})` : '',
+    ...lastDays(bpl, 30).reverse().slice(0, 40).map(r => '- ' + readingLine('bp', r, true))]).join('\n'));
+  const sgl = readings(p, 'sugar');
+  if (sgl.length) {
+    const unit = sgl[sgl.length - 1].unit || 'mg/dL', wk = lastDays(sgl, 7);
+    const fa = sugarAverage(wk.filter(FASTING), unit), am = sugarAverage(wk.filter(AFTER_MEAL), unit);
+    blocks.push(lines(['BLOOD SUGAR LOG',
+      fa ? `Fasting average of the last 7 days: ${fa.text} (${fa.n})` : '',
+      am ? `After-meal average of the last 7 days: ${am.text} (${am.n})` : '',
+      ...lastDays(sgl, 30).reverse().slice(0, 40).map(r => '- ' + readingLine('sugar', r, true))]).join('\n'));
+  }
+
   if (isFemale(p)) {
     const w = sec(p, 'women');
     const wl = lines([w.menopause ? 'Post-menopausal' : (w.lmp ? 'LMP ' + fmtDate(w.lmp) : ''), w.ob, w.notes]);
     if (wl.length) blocks.push('OB-GYN\n' + wl.join('\n'));
   }
 
-  const v = sec(p, 'vaccines');
-  const vl = SEC.vaccines.fields.filter(f => v[f.k]).map(f => `${f.label} ${v[f.k]}`);
-  if (vl.length) blocks.push('VACCINES\n' + vl.join('; '));
+  const vl = vaccineGroups(p).map(g => `- ${g.name}: ${g.shots.map(sh => shotLine(sh)).join('; ')}${g.next ? '. ' + nextLine(g) : ''}`);
+  if (vl.length) blocks.push('VACCINES\n' + vl.join('\n'));
 
   const h = sec(p, 'history');
   const hl = lines([h.family ? 'Family history: ' + h.family : '', h.smoking ? 'Smoking: ' + h.smoking : '', h.alcohol ? 'Alcohol: ' + h.alcohol : '', h.work ? 'Work: ' + h.work : '']);
@@ -1886,7 +2266,7 @@ async function renderScan() {
       try {
         const packed = Array.from({ length: total }, (_, i) => parts.get(i + 1)).join('');
         const data = JSON.parse(await unpackText(packed));
-        if (data.v !== 1 || !data.p?.id) throw new Error('bad');
+        if (data.v !== 1 || !goodId(data.p?.id) || !data.p.data) throw new Error('bad');
         incoming = { p: data.p, made: data.made };
         location.hash = '#/merge';
       } catch (e) {
@@ -1925,12 +2305,17 @@ function fieldShow(f, v) {
   return valueText(f, v);
 }
 function listShow(s, d) {
+  if (s.log) return [...(d?.items || [])].filter(r => r.when).sort((a, b) => b.when.localeCompare(a.when)).map(r => readingLine(s.key, r, true));
+  if (s.key === 'vaccines') return (d?.items || []).filter(i => itemFilled(i, s.items)).map(i => `${i.name || 'Vaccine'}: ${shotLine(i)}${i.next ? ', next due ' + fmtDate(i.next) : ''}`);
   const items = (d?.items || []).filter(i => itemFilled(i, s.items));
   const out = items.map(i => s.items.map(f => f.type === 'check' ? (i[f.k] ? f.label.toLowerCase() : '') : (f.type === 'datetime' && i[f.k] ? 'last dose ' + fmtStamp(i[f.k]) : i[f.k])).filter(Boolean).join(', '));
   if (!out.length && d?.none) out.push(s.none);
   return out;
 }
-const sameItem = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const solid = o => JSON.stringify(Object.keys(o || {}).sort().filter(k => filled(o[k])).map(k => [k, o[k]]));
+const sameItem = (a, b) => Array.isArray(a) && Array.isArray(b)
+  ? a.length === b.length && a.every((x, i) => sameItem(x, b[i]))
+  : (a?.id && b?.id ? a.id === b.id && solid(a) === solid(b) : solid(a) === solid(b));
 function cleanItems(s, d) { return (d?.items || []).filter(i => itemFilled(i, s.items)); }
 
 function diffPeople(mine, theirs) {
@@ -1943,7 +2328,8 @@ function diffPeople(mine, theirs) {
     if (s.items) {
       const a = cleanItems(s, dm), b = cleanItems(s, dt);
       if (!sameItem(a, b) || !!dm.none !== !!dt.none) {
-        diffs.push({ kind: 'list', s, tm, tt, mineV: listShow(s, dm), theirV: listShow(s, dt), choice: pick(!a.length && !dm.none, !b.length && !dt.none) });
+        const both = s.log && a.length && b.length;
+        diffs.push({ kind: 'list', s, tm, tt, mineV: listShow(s, dm), theirV: listShow(s, dt), choice: both ? 'both' : pick(!a.length && !dm.none, !b.length && !dt.none) });
       }
     }
     for (const f of s.fields || []) {
@@ -1968,6 +2354,7 @@ function applyDiffs(mine, theirs, diffs) {
       else {
         const merged = cleanItems(d.s, target);
         for (const it of cleanItems(d.s, src)) if (!merged.some(x => sameItem(x, it))) merged.push(JSON.parse(JSON.stringify(it)));
+        if (d.s.log) merged.sort((x, y) => (x.when || '').localeCompare(y.when || ''));
         target.items = merged; target.none = merged.length ? false : (target.none || src.none);
       }
     } else {
